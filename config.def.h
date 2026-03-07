@@ -15,6 +15,7 @@ static const float focuscolor[] = COLOR (0xbd93f9ff); /* purple */
 static const float urgentcolor[] = COLOR (0xff0000ff);
 
 static const float fullscreen_bg[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+static const float default_opacity = 1.0f;
 
 #define TAGCOUNT (9)
 
@@ -22,8 +23,8 @@ static int log_level = WLR_ERROR;
 
 /* window rules - gimp floating, firefox on tag 9 */
 static const Rule rules[] = {
-  { "Gimp_EXAMPLE", NULL, 0, 1, -1 },
-  { "firefox_EXAMPLE", NULL, 1 << 8, 0, -1 },
+  { "Gimp_EXAMPLE", NULL, 0, 1, 1.0f, -1 },
+  { "firefox_EXAMPLE", NULL, 1 << 8, 0, 1.0f, -1 },
 };
 
 /* layouts: tile, floating, monocle */
@@ -95,7 +96,7 @@ static const char *const autostart[]
 static const char *termcmd[] = { "foot", NULL };
 static const char *menucmd[] = { "wmenu-run", "-t", NULL };
 static const char *lockcmd[] = { "wlock", NULL };
-static const char *clipcmd[] = { "cliphist-pick", NULL };
+static const char *clipcmd[] = { "clipboard-pick.sh", NULL };
 
 /* media keys only - FN+F keys handled by laptop firmware */
 static const char *brightnessup[] = { "brightnessctl", "set", "+5%", NULL };
@@ -143,6 +144,8 @@ static const Key keys[] = {
     { .i = -1 } },                                  /* fewer masters */
   { MODKEY, XKB_KEY_h, setmfact, { .f = -0.05f } }, /* shrink master */
   { MODKEY, XKB_KEY_l, setmfact, { .f = +0.05f } }, /* expand master */
+  { MODKEY, XKB_KEY_o, setopacity, { .f = +0.1f } },
+  { MODKEY | WLR_MODIFIER_SHIFT, XKB_KEY_O, setopacity, { .f = -0.1f } },
 
   /* layouts */
   { MODKEY, XKB_KEY_Tab, view, { 0 } },                   /* last tag */
