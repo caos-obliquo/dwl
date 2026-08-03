@@ -138,6 +138,7 @@ typedef struct {
 	unsigned int bw;
 	uint32_t tags;
 	int isfloating, isurgent, isfullscreen;
+	float opacity;
 	uint32_t resize; /* configure serial of a pending resize */
 } Client;
 
@@ -227,6 +228,7 @@ typedef struct {
 	const char *title;
 	uint32_t tags;
 	int isfloating;
+	float opacity;
 	int monitor;
 } Rule;
 
@@ -319,6 +321,7 @@ static void requeststartdrag(struct wl_listener *listener, void *data);
 static void requestmonstate(struct wl_listener *listener, void *data);
 static void resize(Client *c, struct wlr_box geo, int interact);
 static void run(char *startup_cmd);
+static void scenebuffersetopacity(struct wlr_scene_buffer *buffer, int sx, int sy, void *user_data);
 static void setcursor(struct wl_listener *listener, void *data);
 static void setcursorshape(struct wl_listener *listener, void *data);
 static void setfloating(Client *c, int floating);
@@ -326,6 +329,7 @@ static void setfullscreen(Client *c, int fullscreen);
 static void setlayout(const Arg *arg);
 static void setmfact(const Arg *arg);
 static void setmon(Client *c, Monitor *m, uint32_t newtags);
+static void setopacity(const Arg *arg);
 static void setpsel(struct wl_listener *listener, void *data);
 static void setsel(struct wl_listener *listener, void *data);
 static void setup(void);
@@ -490,6 +494,7 @@ applyrules(Client *c)
 		if ((!r->title || strstr(title, r->title))
 				&& (!r->id || strstr(appid, r->id))) {
 			c->isfloating = r->isfloating;
+			c->opacity = r->opacity;
 			newtags |= r->tags;
 			i = 0;
 			wl_list_for_each(m, &mons, link) {
@@ -1127,6 +1132,7 @@ createnotify(struct wl_listener *listener, void *data)
 	c = toplevel->base->data = ecalloc(1, sizeof(*c));
 	c->surface.xdg = toplevel->base;
 	c->bw = borderpx;
+	c->opacity = default_opacity;
 
 	LISTEN(&toplevel->base->surface->events.commit, &c->commit, commitnotify);
 	LISTEN(&toplevel->base->surface->events.map, &c->map, mapnotify);
@@ -2160,6 +2166,8 @@ rendermon(struct wl_listener *listener, void *data)
 	/* Render if no XDG clients have an outstanding resize and are visible on
 	 * this monitor. */
 	wl_list_for_each(c, &clients, link) {
+        wlr_scene_node_for_each_buffer(&c->scene_surface->node, scenebuffersetopacity, c);
+
 		if (c->resize && !c->isfloating && client_is_rendered_on_mon(c, m) && !client_is_stopped(c))
 			goto skip;
 	}
@@ -2297,6 +2305,15 @@ run(char *startup_cmd)
 }
 
 void
+scenebuffersetopacity(struct wlr_scene_buffer *buffer, int sx, int sy, void *data)
+{
+	Client *c = data;
+	/* xdg-popups are children of Client.scene, we do not have to worry about
+	   messing with them. */
+	wlr_scene_buffer_set_opacity(buffer, c->isfullscreen ? 1 : c->opacity);
+}
+
+void
 setcursor(struct wl_listener *listener, void *data)
 {
 	/* This event is raised by the seat when a client provides a cursor image */
@@ -2364,6 +2381,7 @@ setfullscreen(Client *c, int fullscreen)
 		 * client positions are set by the user and cannot be recalculated */
 		resize(c, c->prev, 0);
 	}
+	wlr_scene_node_for_each_buffer(&c->scene_surface->node, scenebuffersetopacity, c);
 	arrange(c->mon);
 	printstatus();
 }
@@ -2418,6 +2436,23 @@ setmon(Client *c, Monitor *m, uint32_t newtags)
 		setfloating(c, c->isfloating);
 	}
 	focusclient(focustop(selmon), 1);
+}
+
+void
+setopacity(const Arg *arg)
+{
+	Client *sel = focustop(selmon);
+	if (!sel)
+		return;
+
+	sel->opacity += arg->f;
+	if (sel->opacity > 1.0)
+		sel->opacity = 1.0f;
+
+	if (sel->opacity < 0.1)
+		sel->opacity = 0.1f;
+
+	wlr_scene_node_for_each_buffer(&sel->scene_surface->node, scenebuffersetopacity, sel);
 }
 
 void
@@ -3131,6 +3166,7 @@ createnotifyx11(struct wl_listener *listener, void *data)
 	c->surface.xwayland = xsurface;
 	c->type = X11;
 	c->bw = client_is_unmanaged(c) ? 0 : borderpx;
+	c->opacity = default_opacity;
 
 	/* Listen to the various events it can emit */
 	LISTEN(&xsurface->events.associate, &c->associate, associatex11);
