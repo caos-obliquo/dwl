@@ -89,10 +89,6 @@ static const enum libinput_config_tap_button_map button_map
     .v = (const char *[]) { "/bin/sh", "-c", cmd, NULL }                      \
   }
 
-/* idle to use with lock */
-static const char *const autostart[]
-    = { "kapd", NULL, "widle", "-t", "300", "wlock", NULL, NULL };
-
 /* commands */
 static const char *termcmd[] = { "foot", NULL };
 static const char *menucmd[] = { "wmenu-run", "-t", NULL };
