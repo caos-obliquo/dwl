@@ -1,0 +1,15 @@
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - run: pacman -Syu --noconfirm base-devel git wlroots wayland wayland-protocols libinput libxcb xcb-util-wm pkgconf
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: make
