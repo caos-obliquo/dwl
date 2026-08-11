@@ -12,20 +12,25 @@ Apply with: `patch -p1 < patches/<name>.patch` (from the repo root), then
 | Patch | Why |
 |---|---|
 | `fix-rendermon-pending-resize-freeze` (in-tree) | Fixes the Super+F/Super+T output freeze. See `docs/BUG-FLOAT-TILE-FREEZE.md`. |
+| `attachbottom` (in-tree) | New windows open at the bottom of the stack instead of stealing the master slot. Applied. |
+| `spawnorfocus` (in-tree) | `Super+b` focuses firefox if running, spawns it otherwise. Applied. |
+| `warpcursor` (in-tree) | Cursor jumps into the newly focused window — pairs with `sloppyfocus`. Applied. |
+| `alwayscenter` (in-tree) | Floating windows spawn centered on the monitor. Applied. |
+| `movestack` (in-tree) | `Super+Shift+J/K` reorders the stack. Applied. |
 | `xwayland-handle-minimize` | XWayland is enabled. Without it X11 windows that minimize can leave focus/rendering in a weird state. |
 | `foreign-toplevel-management` | Lets tools like `wlopm`, some screenshot/manage apps and newer status bars see and control windows. Cheap, stable. |
 | `primaryselection` | Adds middle-click primary selection paste for Wayland clients — near-mandatory muscle memory for X users. |
+
+> The five movement patches above (`attachbottom`, `spawnorfocus`, `movestack`,
+> `warpcursor`, `alwayscenter`) are applied and committed — see
+> `docs/KEYBINDS.md` for their binds and `patches/<name>/README.md` for each
+> patch's details and deviations.
 
 ## Layout / window management (choose what fits your flow)
 
 | Patch | Why |
 |---|---|
 | `pertag` | Per-tag layout memory: keep tag 1 tiled, tag 2 floating, etc. Directly complements the Super+F/Super+T workflow and removes the "global layout" surprise. |
-| `attachbottom` | New windows open at the bottom of the stack instead of stealing the master slot — the single most-requested dwm/dwl behavior change. |
-| `spawnorfocus` | Focus an already-running app instead of spawning a second instance. Great with your single-key spawns. |
-| `movestack` | Keyboard move of windows in the stack (`Super+Shift+J/K` style). |
-| `alwayscenter` | New floating windows open centered instead of wherever they were mapped. |
-| `warpcursor` | Cursor jumps to the focused window — pairs well with `sloppyfocus`. |
 | `gaps` / `vanitygaps` | Window gaps. Pure aesthetic; only if you like the look. |
 | `centeredmaster` / `dwindle` / `column` | Alternative tiling layouts beyond `[]=`/`[M]`. |
 
