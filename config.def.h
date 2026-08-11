@@ -49,7 +49,7 @@ static const struct xkb_rule_names xkb_rules = {
   .model = "abnt2",
   .layout = "br",
   .variant = NULL,
-  .options = NULL,
+  .options = "caps:escape", /* keyboard-warrior: CapsLock is Escape */
 };
 
 /* trackpad */
@@ -96,6 +96,9 @@ static const char *const autostart[]
 /* commands */
 static const char *termcmd[] = { "foot", NULL };
 static const char *menucmd[] = { "wmenu-run", "-t", NULL };
+static const char *browsercmd[] = { "firefox", "firefox", NULL };
+static const char *dismisscmd[] = { "makoctl", "dismiss", NULL };
+static const char *passcmd[] = { "passmenu", NULL }; /* requires passmenu (pass) */
 static const char *lockcmd[] = { "wlock", NULL };
 static const char *clipcmd[] = { "wclipmenu", NULL };
 static const char *clipimgcmd[] = { "wclipmenu", "image", NULL };
@@ -126,6 +129,9 @@ static const Key keys[] = {
 
   /* launchers */
   { MODKEY, XKB_KEY_d, spawn, { .v = menucmd } },
+  { MODKEY, XKB_KEY_b, spawnorfocus, { .v = browsercmd } },
+  { MODKEY | WLR_MODIFIER_SHIFT, XKB_KEY_D, spawn, { .v = dismisscmd } },
+  { MODKEY, XKB_KEY_g, spawn, { .v = passcmd } },
   { MODKEY | WLR_MODIFIER_SHIFT, XKB_KEY_Return, spawn, { .v = termcmd } },
   { MODKEY | WLR_MODIFIER_SHIFT, XKB_KEY_L, spawn, { .v = lockcmd } },
 	{ MODKEY, XKB_KEY_p, spawn, { .v = clipcmd } },
@@ -134,6 +140,8 @@ static const Key keys[] = {
   /* window navigation - same monitor */
   { MODKEY, XKB_KEY_j, focusstack, { .i = +1 } }, /* next window */
   { MODKEY, XKB_KEY_k, focusstack, { .i = -1 } }, /* prev window */
+  { MODKEY | WLR_MODIFIER_SHIFT, XKB_KEY_j, movestack, { .i = +1 } }, /* move window down stack */
+  { MODKEY | WLR_MODIFIER_SHIFT, XKB_KEY_k, movestack, { .i = -1 } }, /* move window up stack */
   { MODKEY, XKB_KEY_Return, zoom, { 0 } },        /* promote to master */
 
   /* master area control */

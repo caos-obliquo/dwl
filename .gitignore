@@ -46,3 +46,5 @@ config.def.h.bak
 
 # Stray local dirs
 build/
+*.orig
+*.rej
