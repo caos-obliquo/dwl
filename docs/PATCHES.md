@@ -13,7 +13,7 @@ Apply with: `patch -p1 < patches/<name>.patch` (from the repo root), then
 |---|---|
 | `fix-rendermon-pending-resize-freeze` (in-tree) | Fixes the Super+F/Super+T output freeze. See `docs/BUG-FLOAT-TILE-FREEZE.md`. |
 | `attachbottom` (in-tree) | New windows open at the bottom of the stack instead of stealing the master slot. Applied. |
-| `spawnorfocus` (in-tree) | `Super+b` focuses firefox if running, spawns it otherwise. Applied. |
+| `spawnorfocus` (in-tree) | `Super+b` focuses waterfox if running, spawns it otherwise. Applied. |
 | `warpcursor` (in-tree) | Cursor jumps into the newly focused window — pairs with `sloppyfocus`. Applied. |
 | `alwayscenter` (in-tree) | Floating windows spawn centered on the monitor. Applied. |
 | `movestack` (in-tree) | `Super+Shift+J/K` reorders the stack. Applied. |

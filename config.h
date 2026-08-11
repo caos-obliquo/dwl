@@ -21,11 +21,11 @@ static const float default_opacity = 1.0f;
 
 static int log_level = WLR_ERROR;
 
-/* window rules - gimp floating, firefox on tag 9 */
+/* window rules - gimp floating, waterfox on tag 9 */
 static const Rule rules[] = {
   { "wmenu-center", NULL, 0, 1, 0.85f, -1 },
   { "Gimp_EXAMPLE", NULL, 0, 1, 1.0f, -1 },
-  { "firefox_EXAMPLE", NULL, 1 << 8, 0, 1.0f, -1 },
+  { "waterfox_EXAMPLE", NULL, 1 << 8, 0, 1.0f, -1 },
 };
 
 /* layouts: tile, floating, monocle */
@@ -92,7 +92,7 @@ static const enum libinput_config_tap_button_map button_map
 /* commands */
 static const char *termcmd[] = { "foot", NULL };
 static const char *menucmd[] = { "wmenu-run", "-t", NULL };
-static const char *browsercmd[] = { "firefox", "firefox", NULL };
+static const char *browsercmd[] = { "waterfox", "Waterfox", NULL };
 static const char *dismisscmd[] = { "makoctl", "dismiss", NULL };
 static const char *passcmd[] = { "passmenu", NULL }; /* requires passmenu (pass) */
 static const char *lockcmd[] = { "wlock", NULL };
@@ -108,6 +108,9 @@ static const char *volumedown[]
     = { "wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "5%-", NULL };
 static const char *volumeup[]
     = { "wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "5%+", NULL };
+static const char *playpause[] = { "playerctl", "play-pause", NULL };
+static const char *playnext[] = { "playerctl", "next", NULL };
+static const char *playprev[] = { "playerctl", "previous", NULL };
 
 /* screenshots */
 static const char *screenshot_full[] = { "dwl-screenshot", "full", NULL };
@@ -202,6 +205,11 @@ static const Key keys[] = {
   { 0, XKB_KEY_XF86AudioMute, spawn, { .v = volumemute } },
   { 0, XKB_KEY_XF86AudioLowerVolume, spawn, { .v = volumedown } },
   { 0, XKB_KEY_XF86AudioRaiseVolume, spawn, { .v = volumeup } },
+
+  /* media control - playerctl */
+  { 0, XKB_KEY_XF86AudioPlay, spawn, { .v = playpause } },
+  { 0, XKB_KEY_XF86AudioNext, spawn, { .v = playnext } },
+  { 0, XKB_KEY_XF86AudioPrev, spawn, { .v = playprev } },
 
   /* screenshots */
   { MODKEY, XKB_KEY_s, spawn, { .v = screenshot_area } },
