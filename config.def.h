@@ -96,6 +96,7 @@ static const char *const autostart[]
 /* commands */
 static const char *termcmd[] = { "foot", NULL };
 static const char *menucmd[] = { "wmenu-run", "-t", NULL };
+static const char *browsercmd[] = { "firefox", NULL, "firefox" };
 static const char *lockcmd[] = { "wlock", NULL };
 static const char *clipcmd[] = { "wclipmenu", NULL };
 static const char *clipimgcmd[] = { "wclipmenu", "image", NULL };
@@ -126,6 +127,7 @@ static const Key keys[] = {
 
   /* launchers */
   { MODKEY, XKB_KEY_d, spawn, { .v = menucmd } },
+  { MODKEY, XKB_KEY_b, spawnorfocus, { .v = browsercmd } },
   { MODKEY | WLR_MODIFIER_SHIFT, XKB_KEY_Return, spawn, { .v = termcmd } },
   { MODKEY | WLR_MODIFIER_SHIFT, XKB_KEY_L, spawn, { .v = lockcmd } },
 	{ MODKEY, XKB_KEY_p, spawn, { .v = clipcmd } },

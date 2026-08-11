@@ -8,6 +8,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
@@ -334,6 +335,7 @@ static void setpsel(struct wl_listener *listener, void *data);
 static void setsel(struct wl_listener *listener, void *data);
 static void setup(void);
 static void spawn(const Arg *arg);
+static void spawnorfocus(const Arg *arg);
 static void startdrag(struct wl_listener *listener, void *data);
 static void tag(const Arg *arg);
 static void tagmon(const Arg *arg);
@@ -2712,6 +2714,34 @@ spawn(const Arg *arg)
 		execvp(((char **)arg->v)[0], (char **)arg->v);
 		die("dwl: execvp %s failed:", ((char **)arg->v)[0]);
 	}
+}
+
+void
+spawnorfocus(const Arg *arg)
+{
+	char *needle;
+	Client *c;
+	int i = 0;
+
+	/* arg->v layout: { command, NULL, match-string-or-NULL }.
+	 * Match string selects an existing client by app_id/title substring;
+	 * NULL falls back to the command name. */
+	while (((char **)arg->v)[i++]);
+	needle = ((char **)arg->v)[i + 1] ? ((char **)arg->v)[i + 1] : ((char **)arg->v)[0];
+
+	wl_list_for_each(c, &clients, link)
+		if (strstr(client_get_title(c), needle)
+				|| strstr(client_get_appid(c), needle)) {
+			selmon = c->mon;
+			if (!(c->tags & selmon->tagset[selmon->seltags]))
+				selmon->tagset[selmon->seltags] = c->tags;
+
+			focusclient(c, 1);
+			arrange(selmon);
+			return;
+		}
+
+	spawn(arg);
 }
 
 void
