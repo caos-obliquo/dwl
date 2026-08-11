@@ -21,11 +21,11 @@ static const float default_opacity = 1.0f;
 
 static int log_level = WLR_ERROR;
 
-/* window rules - gimp floating, firefox on tag 9 */
+/* window rules - gimp floating, waterfox on tag 9 */
 static const Rule rules[] = {
   { "wmenu-center", NULL, 0, 1, 0.85f, -1 },
   { "Gimp_EXAMPLE", NULL, 0, 1, 1.0f, -1 },
-  { "firefox_EXAMPLE", NULL, 1 << 8, 0, 1.0f, -1 },
+  { "waterfox_EXAMPLE", NULL, 1 << 8, 0, 1.0f, -1 },
 };
 
 /* layouts: tile, floating, monocle */
@@ -92,7 +92,7 @@ static const enum libinput_config_tap_button_map button_map
 /* commands */
 static const char *termcmd[] = { "foot", NULL };
 static const char *menucmd[] = { "wmenu-run", "-t", NULL };
-static const char *browsercmd[] = { "firefox", "firefox", NULL };
+static const char *browsercmd[] = { "waterfox", "Waterfox", NULL };
 static const char *dismisscmd[] = { "makoctl", "dismiss", NULL };
 static const char *passcmd[] = { "passmenu", NULL }; /* requires passmenu (pass) */
 static const char *lockcmd[] = { "wlock", NULL };
