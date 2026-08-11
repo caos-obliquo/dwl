@@ -21,11 +21,6 @@ Apply with: `patch -p1 < patches/<name>.patch` (from the repo root), then
 | `foreign-toplevel-management` | Lets tools like `wlopm`, some screenshot/manage apps and newer status bars see and control windows. Cheap, stable. |
 | `primaryselection` | Adds middle-click primary selection paste for Wayland clients — near-mandatory muscle memory for X users. |
 
-> The five movement patches above (`attachbottom`, `spawnorfocus`, `movestack`,
-> `warpcursor`, `alwayscenter`) are applied and committed — see
-> `docs/KEYBINDS.md` for their binds and `patches/<name>/README.md` for each
-> patch's details and deviations.
-
 ## Layout / window management (choose what fits your flow)
 
 | Patch | Why |
