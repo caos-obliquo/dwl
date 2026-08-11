@@ -136,6 +136,8 @@ static const Key keys[] = {
   /* window navigation - same monitor */
   { MODKEY, XKB_KEY_j, focusstack, { .i = +1 } }, /* next window */
   { MODKEY, XKB_KEY_k, focusstack, { .i = -1 } }, /* prev window */
+  { MODKEY | WLR_MODIFIER_SHIFT, XKB_KEY_j, movestack, { .i = +1 } }, /* move window down stack */
+  { MODKEY | WLR_MODIFIER_SHIFT, XKB_KEY_k, movestack, { .i = -1 } }, /* move window up stack */
   { MODKEY, XKB_KEY_Return, zoom, { 0 } },        /* promote to master */
 
   /* master area control */
