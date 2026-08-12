@@ -89,6 +89,10 @@ static const enum libinput_config_tap_button_map button_map
     .v = (const char *[]) { "/bin/sh", "-c", cmd, NULL }                      \
   }
 
+/* idle to use with lock */
+static const char *const autostart[]
+    = { "widle", "-t", "300000", "wlock", NULL, NULL };
+
 /* commands */
 static const char *termcmd[] = { "foot", NULL };
 static const char *menucmd[] = { "wmenu-run", "-t", NULL };
@@ -108,9 +112,9 @@ static const char *volumedown[]
     = { "wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "5%-", NULL };
 static const char *volumeup[]
     = { "wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "5%+", NULL };
-static const char *playpause[] = { "playerctl", "play-pause", NULL };
-static const char *playnext[] = { "playerctl", "next", NULL };
-static const char *playprev[] = { "playerctl", "previous", NULL };
+static const char *audioplay[] = { "playerctl", "-p", "youtui", "play-pause", NULL };
+static const char *audionext[] = { "playerctl", "-p", "youtui", "next", NULL };
+static const char *audioprev[] = { "playerctl", "-p", "youtui", "previous", NULL };
 
 /* screenshots */
 static const char *screenshot_full[] = { "dwl-screenshot", "full", NULL };
@@ -133,8 +137,8 @@ static const Key keys[] = {
   { MODKEY, XKB_KEY_g, spawn, { .v = passcmd } },
   { MODKEY | WLR_MODIFIER_SHIFT, XKB_KEY_Return, spawn, { .v = termcmd } },
   { MODKEY | WLR_MODIFIER_SHIFT, XKB_KEY_L, spawn, { .v = lockcmd } },
-  { MODKEY, XKB_KEY_p, spawn, { .v = clipcmd } },
-  { MODKEY | WLR_MODIFIER_SHIFT, XKB_KEY_P, spawn, { .v = clipimgcmd } },
+	{ MODKEY, XKB_KEY_p, spawn, { .v = clipcmd } },
+	{ MODKEY | WLR_MODIFIER_SHIFT, XKB_KEY_P, spawn, { .v = clipimgcmd } },
 
   /* window navigation - same monitor */
   { MODKEY, XKB_KEY_j, focusstack, { .i = +1 } }, /* next window */
@@ -206,10 +210,10 @@ static const Key keys[] = {
   { 0, XKB_KEY_XF86AudioLowerVolume, spawn, { .v = volumedown } },
   { 0, XKB_KEY_XF86AudioRaiseVolume, spawn, { .v = volumeup } },
 
-  /* media control - playerctl */
-  { 0, XKB_KEY_XF86AudioPlay, spawn, { .v = playpause } },
-  { 0, XKB_KEY_XF86AudioNext, spawn, { .v = playnext } },
-  { 0, XKB_KEY_XF86AudioPrev, spawn, { .v = playprev } },
+  /* media control - youtui */
+  { 0, XKB_KEY_XF86AudioPlay, spawn, { .v = audioplay } },
+  { 0, XKB_KEY_XF86AudioNext, spawn, { .v = audionext } },
+  { 0, XKB_KEY_XF86AudioPrev, spawn, { .v = audioprev } },
 
   /* screenshots */
   { MODKEY, XKB_KEY_s, spawn, { .v = screenshot_area } },
