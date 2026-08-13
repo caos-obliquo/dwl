@@ -49,7 +49,7 @@ static const struct xkb_rule_names xkb_rules = {
   .model = "abnt2",
   .layout = "br",
   .variant = NULL,
-  .options = "caps:escape", /* keyboard-warrior: CapsLock is Escape */
+  .options = "caps:swapescape", /* Caps↔Esc full swap (both directions) */
 };
 
 /* trackpad */
