@@ -17,7 +17,7 @@ static const float default_opacity = 1.0f;
 static const char *fonts[] = { "JetBrainsMono Nerd Font:size=16" };
 static uint32_t colors[][3] = {
   /*               fg          bg          border    */
-  [SchemeNorm] = { 0xeeeeeeff, 0x222222cc, 0x444444ff }, /* bg 80% alpha */
+  [SchemeNorm] = { 0xeeeeeeff, 0x222222ee, 0x444444ff }, /* bg 93% alpha */
   [SchemeSel]  = { 0x1e1e2eff, 0xbd93f9dd, 0xbd93f9dd }, /* Dracula purple 87% alpha */
   [SchemeUrg]  = { 0xff0000ff, 0xff0000cc, 0xff0000ff },
 };
