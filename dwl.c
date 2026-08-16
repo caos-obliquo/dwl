@@ -3510,6 +3510,13 @@ updatebar(Monitor *m)
 	m->lrpad = m->drw->font->height;
 	m->b.height = m->drw->font->height + 2;
 	m->b.real_height = (int)((float)m->b.height / m->wlr_output->scale);
+
+	/* publish the logical bar height so wmenu's launcher pill can match it */
+	FILE *f = fopen("/tmp/dwl-bar-geometry", "w");
+	if (f) {
+		fprintf(f, "%d\n", m->b.real_height);
+		fclose(f);
+	}
 }
 
 void
