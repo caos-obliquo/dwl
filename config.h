@@ -44,6 +44,7 @@ static const Rule rules[] = {
   { "waterfox", "waterfox", 1 << 8, 0, 1.0f, -1, "󰈹" },
   { "chromium", "chromium", 0, 0, 1.0f, -1, "󰊯" },
   { "steam", "steam", 0, 0, 1.0f, -1, "" },
+  { "youtui", NULL, 0, 0, 1.0f, -1, "󰑈" },
 };
 
 /* layouts: tile, floating, monocle */
