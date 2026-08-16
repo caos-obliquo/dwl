@@ -7,6 +7,8 @@
 static const int sloppyfocus = 1; /* focus follows mouse */
 static const int bypass_surface_visibility = 0;
 static const unsigned int borderpx = 0; /* window border width */
+static const unsigned int systrayspacing = 2; /* systray spacing */
+static const int showsystray = 1; /* 0 means no systray */
 
 /* Dracula theme */
 static const float rootcolor[] = COLOR (0x222222ff);
@@ -96,6 +98,7 @@ static const char *const autostart[]
 /* commands */
 static const char *termcmd[] = { "foot", NULL };
 static const char *menucmd[] = { "wmenu-run", "-t", NULL };
+static const char *dmenucmd[] = { "wmenu", NULL };
 static const char *browsercmd[] = { "waterfox", "Waterfox", NULL };
 static const char *dismisscmd[] = { "makoctl", "dismiss", NULL };
 static const char *passcmd[] = { "passmenu", NULL }; /* requires passmenu (pass) */
@@ -258,4 +261,6 @@ static const Button buttons[] = {
   { MODKEY, BTN_LEFT, moveresize, { .ui = CurMove } },
   { MODKEY, BTN_MIDDLE, togglefloating, { 0 } },
   { MODKEY, BTN_RIGHT, moveresize, { .ui = CurResize } },
+  { ClkTray, 0, BTN_LEFT, trayactivate, { 0 } },
+  { ClkTray, 0, BTN_RIGHT, traymenu, { 0 } },
 };
