@@ -1766,8 +1766,15 @@ drawbar(Monitor *m)
 	x = drwl_text(m->drw, x, 0, w, m->b.height, m->lrpad / 2, m->ltsymbol, 0);
 
 	if ((w = m->b.width - (tw + x + traywidth)) > m->b.height) {
-		drwl_setscheme(m->drw, colors[SchemeNorm]);
-		drwl_rect(m->drw, x, 0, w, m->b.height, 1, 1);
+		if (c) {
+			drwl_setscheme(m->drw, colors[m == selmon ? SchemeSel : SchemeNorm]);
+			drwl_text(m->drw, x, 0, w, m->b.height, m->lrpad / 2, client_get_title(c), 0);
+			if (c && c->isfloating)
+				drwl_rect(m->drw, x + boxs, boxs, boxw, boxw, 0, 0);
+		} else {
+			drwl_setscheme(m->drw, colors[SchemeNorm]);
+			drwl_rect(m->drw, x, 0, w, m->b.height, 1, 1);
+		}
 	}
 
 	if (traywidth > 0) {
