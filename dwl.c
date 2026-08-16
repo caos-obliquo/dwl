@@ -146,6 +146,7 @@ typedef struct {
 	struct wl_listener set_hints;
 #endif
 	unsigned int bw;
+	char *appicon;
 	uint32_t tags;
 	int isfloating, isurgent, isfullscreen;
 	float opacity;
@@ -225,6 +226,7 @@ struct Monitor {
 	unsigned int seltags;
 	unsigned int sellt;
 	uint32_t tagset[2];
+	char **tag_icons;
 	float mfact;
 	int gamma_lut_changed;
 	int nmaster;
@@ -257,6 +259,7 @@ typedef struct {
 	int isfloating;
 	float opacity;
 	int monitor;
+	const char *appicon;
 } Rule;
 
 typedef struct {
@@ -318,6 +321,9 @@ static void destroypointerconstraint(struct wl_listener *listener, void *data);
 static void destroysessionlock(struct wl_listener *listener, void *data);
 static void destroykeyboardgroup(struct wl_listener *listener, void *data);
 static Monitor *dirtomon(enum wlr_direction dir);
+static void remove_outer_separators(char **str);
+static void appiconsappend(char **str, const char *appicon, size_t new_size);
+static void applyappicon(char *tag_icons[], unsigned int *icons_per_tag, const Client *c);
 static void drawbar(Monitor *m);
 static void drawbars(void);
 static int drawstatus(Monitor *m);
@@ -538,12 +544,18 @@ applyrules(Client *c)
 	const Rule *r;
 	Monitor *mon = selmon, *m;
 
+	outer_separator_beg = outer_separator_beg ? outer_separator_beg : ' ';
+	outer_separator_end = outer_separator_end ? outer_separator_end : ' ';
+	inner_separator = inner_separator ? inner_separator : ' ';
+	truncate_icons_after = truncate_icons_after > 0 ? truncate_icons_after : 1;
+
 	appid = client_get_appid(c);
 	title = client_get_title(c);
 
 	for (r = rules; r < END(rules); r++) {
 		if ((!r->title || strstr(title, r->title))
 				&& (!r->id || strstr(appid, r->id))) {
+			c->appicon = (char *)r->appicon;
 			c->isfloating = r->isfloating;
 			c->opacity = r->opacity;
 			newtags |= r->tags;
@@ -788,7 +800,7 @@ buttonpress(struct wl_listener *listener, void *data)
 			(buffer = wlr_scene_buffer_from_node(node)) && buffer == selmon->scene_buffer) {
 			cx = (cursor->x - selmon->m.x) * selmon->wlr_output->scale;
 			do
-				x += TEXTW(selmon, tags[i]);
+				x += TEXTW(selmon, selmon->tag_icons[i]);
 			while (cx >= x && ++i < LENGTH(tags));
 			if (i < LENGTH(tags)) {
 				click = ClkTagBar;
@@ -921,6 +933,9 @@ cleanupmon(struct wl_listener *listener, void *data)
 	closemon(m);
 	wlr_scene_node_destroy(&m->fullscreen_bg->node);
 	wlr_scene_node_destroy(&m->scene_buffer->node);
+	for (i = 0; i < LENGTH(tags); i++)
+		free(m->tag_icons[i]);
+	free(m->tag_icons);
 	free(m);
 }
 
@@ -1224,6 +1239,7 @@ createmon(struct wl_listener *listener, void *data)
 
 	m = wlr_output->data = ecalloc(1, sizeof(*m));
 	m->wlr_output = wlr_output;
+	m->tag_icons = ecalloc(LENGTH(tags), sizeof(char *));
 
 	for (i = 0; i < LENGTH(m->layers); i++)
 		wl_list_init(&m->layers[i]);
@@ -1574,10 +1590,84 @@ dirtomon(enum wlr_direction dir)
 			dir, selmon->wlr_output, selmon->m.x, selmon->m.y)))
 		return next->data;
 	if ((next = wlr_output_layout_farthest_output(output_layout,
-			dir ^ (WLR_DIRECTION_LEFT|WLR_DIRECTION_RIGHT),
-			selmon->wlr_output, selmon->m.x, selmon->m.y)))
+		dir ^ (WLR_DIRECTION_LEFT|WLR_DIRECTION_RIGHT),
+		selmon->wlr_output, selmon->m.x, selmon->m.y)))
 		return next->data;
 	return selmon;
+}
+
+static void
+remove_outer_separators(char **str)
+{
+	const char *clean_tag_name_beg = *str + 1;
+	const size_t clean_tag_name_len = strlen(*str) - 2;
+	char *temp_tag_name = ecalloc(clean_tag_name_len + 1, sizeof(char));
+
+	strncpy(temp_tag_name, clean_tag_name_beg, clean_tag_name_len);
+
+	free(*str);
+	*str = temp_tag_name;
+}
+
+static void
+appiconsappend(char **str, const char *appicon, size_t new_size)
+{
+	char *temp_tag_name = ecalloc(new_size, sizeof(char));
+
+	/* NOTE: Example format of temp_tag_name (with two appicons):
+	 *  <outer_sep_beg><appicon><inner_sep><appicon><outer_sep_end>
+	 */
+	temp_tag_name[0] = outer_separator_beg;
+	temp_tag_name[new_size - 2] = outer_separator_end;
+
+	strncpy(temp_tag_name + 1, *str, strlen(*str));
+	temp_tag_name[strlen(temp_tag_name)] = inner_separator;
+
+	strncpy(temp_tag_name + strlen(temp_tag_name), appicon, strlen(appicon));
+
+	free(*str);
+	*str = temp_tag_name;
+}
+
+static void
+applyappicon(char *tag_icons[], unsigned int *icons_per_tag, const Client *c)
+{
+	const size_t outer_separators_size = 2;
+	const size_t inner_separator_size = 1;
+	size_t new_size = 0;
+
+	for (unsigned t = 1, i = 0; i < LENGTH(tags); t <<= 1, i++) {
+		if (c->tags & t) {
+			if (icons_per_tag[i] == 0) {
+				free(tag_icons[i]);
+				tag_icons[i] = strndup(c->appicon, strlen(c->appicon));
+			} else {
+				char *icon = NULL;
+				if (icons_per_tag[i] < truncate_icons_after)
+					icon = c->appicon;
+				else if (icons_per_tag[i] == truncate_icons_after)
+					icon = truncate_symbol;
+				else {
+					icons_per_tag[i]++;
+					continue;
+				}
+
+				/* remove outer separators from previous iterations
+				 * otherwise they get applied recursively */
+				if (icons_per_tag[i] > 1)
+					remove_outer_separators(&tag_icons[i]);
+
+				new_size = strlen(tag_icons[i])
+					+ outer_separators_size
+					+ inner_separator_size
+					+ strlen(icon)
+					+ 1;
+
+				appiconsappend(&tag_icons[i], icon, new_size);
+			}
+			icons_per_tag[i]++;
+		}
+	}
 }
 
 void
@@ -1589,6 +1679,7 @@ drawbar(Monitor *m)
 	uint32_t i, occ = 0, urg = 0;
 	Client *c;
 	Buffer *buf;
+	unsigned int icons_per_tag[LENGTH(tags)];
 
 	if (!m->scene_buffer->node.enabled)
 		return;
@@ -1599,9 +1690,19 @@ drawbar(Monitor *m)
 	if (m == selmon) /* status is only drawn on selected monitor */
 		tw = drawstatus(m);
 
+	memset(icons_per_tag, 0, LENGTH(tags) * sizeof(unsigned int));
+
+	for (size_t tag_idx = 0; tag_idx < LENGTH(tags); tag_idx++) {
+		/* reset each tag to its default label, freeing any appicon text */
+		free(m->tag_icons[tag_idx]);
+		m->tag_icons[tag_idx] = strndup(tags[tag_idx], strlen(tags[tag_idx]));
+	}
+
 	wl_list_for_each(c, &clients, link) {
 		if (c->mon != m)
 			continue;
+		if (c->appicon && strlen(c->appicon) > 0)
+			applyappicon(m->tag_icons, icons_per_tag, c);
 		occ |= c->tags;
 		if (c->isurgent)
 			urg |= c->tags;
@@ -1609,10 +1710,10 @@ drawbar(Monitor *m)
 	x = 0;
 	c = focustop(m);
 	for (i = 0; i < LENGTH(tags); i++) {
-		w = TEXTW(m, tags[i]);
+		w = TEXTW(m, m->tag_icons[i]);
 		drwl_setscheme(m->drw, colors[m->tagset[m->seltags] & 1 << i ? SchemeSel : SchemeNorm]);
-		drwl_text(m->drw, x, 0, w, m->b.height, m->lrpad / 2, tags[i], urg & 1 << i);
-		if (occ & 1 << i)
+		drwl_text(m->drw, x, 0, w, m->b.height, m->lrpad / 2, m->tag_icons[i], urg & 1 << i);
+		if (occ & 1 << i && icons_per_tag[i] == 0)
 			drwl_rect(m->drw, x + boxs, boxs, boxw, boxw,
 				m == selmon && c && c->tags & 1 << i,
 				urg & 1 << i);

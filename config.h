@@ -27,11 +27,18 @@ static char *tags[] = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
 
 static int log_level = WLR_ERROR;
 
+/* appicons - tag bar icons; set to 0 to use defaults */
+static char outer_separator_beg = '[';
+static char outer_separator_end = ']';
+static char inner_separator = ' ';
+static unsigned truncate_icons_after = 2;
+static char truncate_symbol[] = "...";
+
 /* window rules - gimp floating, waterfox on tag 9 */
 static const Rule rules[] = {
-  { "wmenu-center", NULL, 0, 1, 0.85f, -1 },
-  { "Gimp_EXAMPLE", NULL, 0, 1, 1.0f, -1 },
-  { "waterfox_EXAMPLE", NULL, 1 << 8, 0, 1.0f, -1 },
+  { "wmenu-center", NULL, 0, 1, 0.85f, -1, NULL },
+  { "Gimp_EXAMPLE", NULL, 0, 1, 1.0f, -1, NULL },
+  { "waterfox_EXAMPLE", NULL, 1 << 8, 0, 1.0f, -1, "" },
 };
 
 /* layouts: tile, floating, monocle */
