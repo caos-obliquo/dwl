@@ -3587,16 +3587,60 @@ updatebar(Monitor *m)
 	if (!(drwl_font_create(m->drw, LENGTH(fonts), fonts, fontattrs)))
 		die("Could not load font");
 
-	m->b.scale = m->wlr_output->scale;
+m->b.scale = m->wlr_output->scale;
 	m->lrpad = m->drw->font->height;
 	m->b.height = m->drw->font->height + 2;
 	m->b.real_height = (int)((float)m->b.height / m->wlr_output->scale);
 
-	/* publish the logical bar height so wmenu's launcher pill can match it */
-	FILE *f = fopen("/tmp/dwl-bar-geometry", "w");
-	if (f) {
-		fprintf(f, "%d\n", m->b.real_height);
-		fclose(f);
+	/* publish the logical bar height + middle section geometry so wmenu's
+	 * launcher pill can match the title area exactly */
+	{
+		/* compute middle_x (after tags+layout) and middle_width (title area) */
+		int tw = 0;
+		if (m == selmon) {
+			/* compute status width like drawstatus does */
+			char rstext[512] = "";
+			char *p;
+			for (p = stext; *p; p++) {
+				if (PREFIX(p, "^^")) { strncat(rstext, p, 2); p++; }
+				else if (PREFIX(p, "^fg(") || PREFIX(p, "^bg(")) {
+					char *argend = strchr(p, ')');
+					if (!argend) { p = strchr(p, '('); }
+					else { p = argend; }
+				} else { strncat(rstext, p, 1); }
+			}
+			tw = TEXTW(m, rstext) - m->lrpad;
+		}
+		/* compute tag widths (like drawbar) */
+		unsigned int icons_per_tag[LENGTH(tags)] = {0};
+		Client *c;
+		wl_list_for_each(c, &clients, link) {
+			if (c->mon != m) continue;
+			if (c->appicon && strlen(c->appicon) > 0)
+				applyappicon(m->tag_icons, icons_per_tag, c);
+		}
+		int x = 0, w = 0;
+		for (size_t i = 0; i < LENGTH(tags); i++) {
+			w = TEXTW(m, m->tag_icons[i]);
+			x += w;
+		}
+		w = TEXTW(m, m->ltsymbol);
+		x += w;
+		/* tray width */
+		int traywidth = showsystray ? tray_get_width(m->tray) : 0;
+		/* middle section bounds */
+		int middle_x = x;
+		int middle_width = m->b.width - (tw + x + m->lrpad + 2 + traywidth); /* lrpad/2 * 2 = lrpad, +2 = 2px padding */
+		if (middle_width < 0) middle_width = 0;
+
+		FILE *f = fopen("/tmp/dwl-bar-geometry", "w");
+		if (f) {
+			uint32_t middle_bg = colors[SchemeNorm][1];
+			uint32_t fg = colors[SchemeNorm][0];
+			fprintf(f, "%d %d %d %08x %08x\n", middle_x, middle_width,
+			        m->b.real_height, middle_bg, fg);
+			fclose(f);
+		}
 	}
 
 	if (showsystray) {
