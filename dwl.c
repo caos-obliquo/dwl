@@ -3592,8 +3592,8 @@ m->b.scale = m->wlr_output->scale;
 	m->b.height = m->drw->font->height + 2;
 	m->b.real_height = (int)((float)m->b.height / m->wlr_output->scale);
 
-	/* publish the logical bar height + middle section geometry so wmenu's
-	 * launcher pill can match the title area exactly */
+/* publish the logical bar height + middle section geometry so wmenu's
+		 * launcher pill can match the title area exactly */
 	{
 		/* compute middle_x (after tags+layout) and middle_width (title area) */
 		int tw = 0;
@@ -3628,16 +3628,20 @@ m->b.scale = m->wlr_output->scale;
 		x += w;
 		/* tray width */
 		int traywidth = showsystray ? tray_get_width(m->tray) : 0;
-		/* middle section bounds */
+		/* middle section bounds (bar-relative) */
 		int middle_x = x;
-		int middle_width = m->b.width - (tw + x + m->lrpad + 2 + traywidth); /* lrpad/2 * 2 = lrpad, +2 = 2px padding */
+		int middle_width = m->b.width - (tw + x + m->lrpad + 2 + traywidth);
 		if (middle_width < 0) middle_width = 0;
+		/* absolute positions on output (for wmenu layer shell) */
+		int abs_middle_x = m->m.x + middle_x;
+		int abs_middle_width = middle_width;
 
 		FILE *f = fopen("/tmp/dwl-bar-geometry", "w");
 		if (f) {
 			uint32_t middle_bg = colors[SchemeNorm][1];
 			uint32_t fg = colors[SchemeNorm][0];
-			fprintf(f, "%d %d %d %08x %08x\n", middle_x, middle_width,
+			/* Format: abs_middle_x abs_middle_width bar_height middle_bg_argb fg_argb */
+			fprintf(f, "%d %d %d %08x %08x\n", abs_middle_x, abs_middle_width,
 			        m->b.real_height, middle_bg, fg);
 			fclose(f);
 		}
