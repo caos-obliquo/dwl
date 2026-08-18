@@ -6,6 +6,9 @@
 /* appearance */
 static const int sloppyfocus = 1; /* focus follows mouse */
 static const int bypass_surface_visibility = 0;
+static const int smartgaps = 0; /* 1 means no outer gap when there is only one window */
+static int gaps = 1; /* 1 means gaps between windows are added */
+static const unsigned int gappx = 6; /* gap pixel between windows */
 static const unsigned int borderpx = 0; /* window border width */
 static const unsigned int systrayspacing = 2; /* systray spacing */
 static const int showsystray = 1; /* 0 means no systray */
@@ -16,6 +19,8 @@ static const int topbar = 1; /* 0 means bottom bar */
 /* Dracula theme — bar colors: fg, bg, border (uint32_t ARGB, alpha baked in) */
 static const float rootcolor[] = COLOR (0x222222ff);
 static const float fullscreen_bg[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+static int enableautoswallow = 1; /* enables autoswallowing newly spawned clients */
+static float swallowborder = 1.0f; /* add this multiplied by borderpx to border when a client is swallowed */
 static const float default_opacity = 1.0f;
 static const char *fonts[] = { "JetBrainsMono Nerd Font:size=16" };
 static uint32_t colors[][3] = {
@@ -37,13 +42,14 @@ static char inner_separator = ' ';
 static unsigned truncate_icons_after = 2;
 static char truncate_symbol[] = "...";
 
-/* window rules - gimp floating, waterfox on tag 9 */
+/* window rules: appid, title, tags, isfloating, opacity, isterm, noswallow, monitor, appicon */
 static const Rule rules[] = {
-  { "wmenu-center", NULL, 0, 1, 0.85f, -1, NULL },
-  { "waterfox", "waterfox", 1 << 8, 0, 1.0f, -1, "󰈹" },
-  { "chromium", "chromium", 0, 0, 1.0f, -1, "󰊯" },
-  { "steam", "steam", 0, 0, 1.0f, -1, "" },
-  { "youtui", NULL, 0, 0, 1.0f, -1, "󰑈" },
+  { "foot", NULL, 0, 0, 1.0f, 1, 1, -1, NULL },
+  { "wmenu-center", NULL, 0, 1, 0.85f, 0, 0, -1, NULL },
+  { "waterfox", "waterfox", 1 << 8, 0, 1.0f, 0, 0, -1, "󰈹" },
+  { "chromium", "chromium", 0, 0, 1.0f, 0, 0, -1, "󰊯" },
+  { "steam", "steam", 0, 0, 1.0f, 0, 0, -1, "" },
+  { "youtui", NULL, 0, 0, 1.0f, 0, 0, -1, "󰑈" },
 };
 
 /* layouts: tile, floating, monocle */
@@ -51,6 +57,8 @@ static const Layout layouts[] = {
   { "[]=", tile },
   { "><>", NULL },
   { "[M]", monocle },
+  { "TTT", bstack },
+  { "===", bstackhoriz },
 };
 
 /* monitor defaults - works with multiple monitors */
@@ -88,6 +96,8 @@ static const enum libinput_config_accel_profile accel_profile
 static const double accel_speed = 0.0;
 static const enum libinput_config_tap_button_map button_map
     = LIBINPUT_CONFIG_TAP_MAP_LRM;
+
+static const int cursor_timeout = 5; /* hide cursor after N seconds idle */
 
 #define MODKEY WLR_MODIFIER_LOGO /* Super/Windows key */
 
@@ -152,7 +162,7 @@ static const Key keys[] = {
   /* launchers */
   { MODKEY, XKB_KEY_d, spawn, { .v = menucmd } },
   { MODKEY, XKB_KEY_b, spawnorfocus, { .v = browsercmd } },
-  { MODKEY, XKB_KEY_x, togglebar, { 0 } }, /* toggle bar (b taken by browser) */
+  { MODKEY | WLR_MODIFIER_SHIFT, XKB_KEY_X, togglebar, { 0 } }, /* toggle bar (Shift+X: plain Cmd+X is Mac cut via PiKVM) */
   { MODKEY | WLR_MODIFIER_SHIFT, XKB_KEY_D, spawn, { .v = dismisscmd } },
   { MODKEY, XKB_KEY_g, spawn, { .v = passcmd } },
   { MODKEY | WLR_MODIFIER_SHIFT, XKB_KEY_Return, spawn, { .v = termcmd } },
@@ -186,12 +196,17 @@ static const Key keys[] = {
   { MODKEY, XKB_KEY_t, setlayout, { .v = &layouts[0] } }, /* tile */
   { MODKEY, XKB_KEY_f, setlayout, { .v = &layouts[1] } }, /* float */
   { MODKEY, XKB_KEY_m, setlayout, { .v = &layouts[2] } }, /* monocle */
+  { MODKEY, XKB_KEY_u, setlayout, { .v = &layouts[3] } }, /* bottomstack */
+  { MODKEY | WLR_MODIFIER_SHIFT, XKB_KEY_U, setlayout, { .v = &layouts[4] } }, /* bottomstack horizontal */
   { MODKEY, XKB_KEY_space, setlayout, { 0 } },            /* toggle layout */
   { MODKEY | WLR_MODIFIER_SHIFT,
     XKB_KEY_space,
     togglefloating,
     { 0 } },                                      /* toggle float */
   { MODKEY, XKB_KEY_e, togglefullscreen, { 0 } }, /* fullscreen */
+{ MODKEY, XKB_KEY_a, toggleswallow, { 0 } }, /* swallow focused into next client */
+{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_A, toggleautoswallow, { 0 } }, /* toggle auto-swallow */
+{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_G, togglegaps, { 0 } }, /* toggle gaps */
 
   /* window kill */
   { MODKEY, XKB_KEY_q, killclient, { 0 } },
