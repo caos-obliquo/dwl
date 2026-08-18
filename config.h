@@ -7,25 +7,43 @@
 static const int sloppyfocus = 1; /* focus follows mouse */
 static const int bypass_surface_visibility = 0;
 static const unsigned int borderpx = 0; /* window border width */
+static const unsigned int systrayspacing = 2; /* systray spacing */
+static const int showsystray = 1; /* 0 means no systray */
 
-/* Dracula theme */
+static const int showbar = 1; /* 0 means no bar */
+static const int topbar = 1; /* 0 means bottom bar */
+
+/* Dracula theme — bar colors: fg, bg, border (uint32_t ARGB, alpha baked in) */
 static const float rootcolor[] = COLOR (0x222222ff);
-static const float bordercolor[] = COLOR (0x444444ff);
-static const float focuscolor[] = COLOR (0xbd93f9ff); /* purple */
-static const float urgentcolor[] = COLOR (0xff0000ff);
-
 static const float fullscreen_bg[] = { 0.0f, 0.0f, 0.0f, 1.0f };
 static const float default_opacity = 1.0f;
+static const char *fonts[] = { "JetBrainsMono Nerd Font:size=16" };
+static uint32_t colors[][3] = {
+  /*               fg          bg          border    */
+  [SchemeNorm] = { 0xeeeeeeff, 0x222222ee, 0x444444ff }, /* bg 93% alpha */
+  [SchemeSel]  = { 0x1e1e2eff, 0xbd93f9dd, 0xbd93f9dd }, /* Dracula purple 87% alpha */
+  [SchemeUrg]  = { 0xff0000ff, 0xff0000cc, 0xff0000ff },
+};
 
-#define TAGCOUNT (9)
+/* tagging */
+static char *tags[] = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
 
 static int log_level = WLR_ERROR;
 
+/* appicons - tag bar icons; set to 0 to use defaults */
+static char outer_separator_beg = '[';
+static char outer_separator_end = ']';
+static char inner_separator = ' ';
+static unsigned truncate_icons_after = 2;
+static char truncate_symbol[] = "...";
+
 /* window rules - gimp floating, waterfox on tag 9 */
 static const Rule rules[] = {
-  { "wmenu-center", NULL, 0, 1, 0.85f, -1 },
-  { "Gimp_EXAMPLE", NULL, 0, 1, 1.0f, -1 },
-  { "waterfox_EXAMPLE", NULL, 1 << 8, 0, 1.0f, -1 },
+  { "wmenu-center", NULL, 0, 1, 0.85f, -1, NULL },
+  { "waterfox", "waterfox", 1 << 8, 0, 1.0f, -1, "󰈹" },
+  { "chromium", "chromium", 0, 0, 1.0f, -1, "󰊯" },
+  { "steam", "steam", 0, 0, 1.0f, -1, "" },
+  { "youtui", NULL, 0, 0, 1.0f, -1, "󰑈" },
 };
 
 /* layouts: tile, floating, monocle */
@@ -89,9 +107,14 @@ static const enum libinput_config_tap_button_map button_map
     .v = (const char *[]) { "/bin/sh", "-c", cmd, NULL }                      \
   }
 
+/* idle to use with lock */
+static const char *const autostart[]
+    = { "widle", "-t", "300000", "wlock", NULL, NULL };
+
 /* commands */
 static const char *termcmd[] = { "foot", NULL };
 static const char *menucmd[] = { "wmenu-run", "-t", NULL };
+static const char *dmenucmd[] = { "wmenu", NULL };
 static const char *browsercmd[] = { "waterfox", "Waterfox", NULL };
 static const char *dismisscmd[] = { "makoctl", "dismiss", NULL };
 static const char *passcmd[] = { "passmenu", NULL }; /* requires passmenu (pass) */
@@ -129,12 +152,13 @@ static const Key keys[] = {
   /* launchers */
   { MODKEY, XKB_KEY_d, spawn, { .v = menucmd } },
   { MODKEY, XKB_KEY_b, spawnorfocus, { .v = browsercmd } },
+  { MODKEY, XKB_KEY_x, togglebar, { 0 } }, /* toggle bar (b taken by browser) */
   { MODKEY | WLR_MODIFIER_SHIFT, XKB_KEY_D, spawn, { .v = dismisscmd } },
   { MODKEY, XKB_KEY_g, spawn, { .v = passcmd } },
   { MODKEY | WLR_MODIFIER_SHIFT, XKB_KEY_Return, spawn, { .v = termcmd } },
   { MODKEY | WLR_MODIFIER_SHIFT, XKB_KEY_L, spawn, { .v = lockcmd } },
-  { MODKEY, XKB_KEY_p, spawn, { .v = clipcmd } },
-  { MODKEY | WLR_MODIFIER_SHIFT, XKB_KEY_P, spawn, { .v = clipimgcmd } },
+	{ MODKEY, XKB_KEY_p, spawn, { .v = clipcmd } },
+	{ MODKEY | WLR_MODIFIER_SHIFT, XKB_KEY_P, spawn, { .v = clipimgcmd } },
 
   /* window navigation - same monitor */
   { MODKEY, XKB_KEY_j, focusstack, { .i = +1 } }, /* next window */
@@ -251,7 +275,17 @@ static const Key keys[] = {
 };
 
 static const Button buttons[] = {
-  { MODKEY, BTN_LEFT, moveresize, { .ui = CurMove } },
-  { MODKEY, BTN_MIDDLE, togglefloating, { 0 } },
-  { MODKEY, BTN_RIGHT, moveresize, { .ui = CurResize } },
+  { ClkLtSymbol, 0, BTN_LEFT, setlayout, { .v = &layouts[0] } },
+  { ClkLtSymbol, 0, BTN_RIGHT, setlayout, { .v = &layouts[2] } },
+  { ClkTitle, 0, BTN_MIDDLE, zoom, { 0 } },
+  { ClkStatus, 0, BTN_MIDDLE, spawn, { .v = termcmd } },
+  { ClkClient, MODKEY, BTN_LEFT, moveresize, { .ui = CurMove } },
+  { ClkClient, MODKEY, BTN_MIDDLE, togglefloating, { 0 } },
+  { ClkClient, MODKEY, BTN_RIGHT, moveresize, { .ui = CurResize } },
+  { ClkTagBar, 0, BTN_LEFT, view, { 0 } },
+  { ClkTagBar, 0, BTN_RIGHT, toggleview, { 0 } },
+  { ClkTagBar, MODKEY, BTN_LEFT, tag, { 0 } },
+  { ClkTagBar, MODKEY, BTN_RIGHT, toggletag, { 0 } },
+  { ClkTray, 0, BTN_LEFT, trayactivate, { 0 } },
+  { ClkTray, 0, BTN_RIGHT, traymenu, { 0 } },
 };
