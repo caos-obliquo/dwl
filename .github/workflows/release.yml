@@ -12,7 +12,7 @@ jobs:
       contents: write
     steps:
       - name: Install build dependencies
-        run: pacman -Syu --noconfirm base-devel git wlroots0.19 wayland wayland-protocols libinput libxcb xcb-util-wm pkgconf
+        run: pacman -Syyu --noconfirm base-devel git wlroots0.19 wayland wayland-protocols libinput libxcb xcb-util-wm pkgconf
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # need full history + tags for major-bump detection
