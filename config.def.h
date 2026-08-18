@@ -55,6 +55,8 @@ static const Layout layouts[] = {
   { "[]=", tile },
   { "><>", NULL },
   { "[M]", monocle },
+  { "TTT", bstack },
+  { "===", bstackhoriz },
 };
 
 /* monitor defaults - works with multiple monitors */
@@ -192,6 +194,8 @@ static const Key keys[] = {
   { MODKEY, XKB_KEY_t, setlayout, { .v = &layouts[0] } }, /* tile */
   { MODKEY, XKB_KEY_f, setlayout, { .v = &layouts[1] } }, /* float */
   { MODKEY, XKB_KEY_m, setlayout, { .v = &layouts[2] } }, /* monocle */
+  { MODKEY, XKB_KEY_u, setlayout, { .v = &layouts[3] } }, /* bottomstack */
+  { MODKEY | WLR_MODIFIER_SHIFT, XKB_KEY_U, setlayout, { .v = &layouts[4] } }, /* bottomstack horizontal */
   { MODKEY, XKB_KEY_space, setlayout, { 0 } },            /* toggle layout */
   { MODKEY | WLR_MODIFIER_SHIFT,
     XKB_KEY_space,
