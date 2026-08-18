@@ -160,7 +160,7 @@ static const Key keys[] = {
   /* launchers */
   { MODKEY, XKB_KEY_d, spawn, { .v = menucmd } },
   { MODKEY, XKB_KEY_b, spawnorfocus, { .v = browsercmd } },
-  { MODKEY, XKB_KEY_x, togglebar, { 0 } }, /* toggle bar (b taken by browser) */
+  { MODKEY | WLR_MODIFIER_SHIFT, XKB_KEY_X, togglebar, { 0 } }, /* toggle bar (Shift+X: plain Cmd+X is Mac cut via PiKVM) */
   { MODKEY | WLR_MODIFIER_SHIFT, XKB_KEY_D, spawn, { .v = dismisscmd } },
   { MODKEY, XKB_KEY_g, spawn, { .v = passcmd } },
   { MODKEY | WLR_MODIFIER_SHIFT, XKB_KEY_Return, spawn, { .v = termcmd } },
