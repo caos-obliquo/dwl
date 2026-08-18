@@ -40,7 +40,6 @@ static char truncate_symbol[] = "...";
 /* window rules - gimp floating, waterfox on tag 9 */
 static const Rule rules[] = {
   { "wmenu-center", NULL, 0, 1, 0.85f, -1, NULL },
-  { "Gimp_EXAMPLE", NULL, 0, 1, 1.0f, -1, NULL },
   { "waterfox", "waterfox", 1 << 8, 0, 1.0f, -1, "󰈹" },
   { "chromium", "chromium", 0, 0, 1.0f, -1, "󰊯" },
   { "steam", "steam", 0, 0, 1.0f, -1, "" },
