@@ -37,13 +37,14 @@ static char inner_separator = ' ';
 static unsigned truncate_icons_after = 2;
 static char truncate_symbol[] = "...";
 
-/* window rules - wmenu launcher floats, waterfox on tag 9 */
+/* window rules: appid, title, tags, isfloating, opacity, isterm, noswallow, monitor, appicon */
 static const Rule rules[] = {
-  { "wmenu-center", NULL, 0, 1, 0.85f, -1, NULL },
-  { "waterfox", "waterfox", 1 << 8, 0, 1.0f, -1, "󰈹" },
-  { "chromium", "chromium", 0, 0, 1.0f, -1, "󰊯" },
-  { "steam", "steam", 0, 0, 1.0f, -1, "" },
-  { "youtui", NULL, 0, 0, 1.0f, -1, "󰑈" },
+  { "foot", NULL, 0, 0, 1.0f, 1, 1, -1, NULL },
+  { "wmenu-center", NULL, 0, 1, 0.85f, 0, 0, -1, NULL },
+  { "waterfox", "waterfox", 1 << 8, 0, 1.0f, 0, 0, -1, "󰈹" },
+  { "chromium", "chromium", 0, 0, 1.0f, 0, 0, -1, "󰊯" },
+  { "steam", "steam", 0, 0, 1.0f, 0, 0, -1, "" },
+  { "youtui", NULL, 0, 0, 1.0f, 0, 0, -1, "󰑈" },
 };
 
 /* layouts: tile, floating, monocle */
@@ -192,6 +193,8 @@ static const Key keys[] = {
     togglefloating,
     { 0 } },                                      /* toggle float */
   { MODKEY, XKB_KEY_e, togglefullscreen, { 0 } }, /* fullscreen */
+{ MODKEY, XKB_KEY_a, toggleswallow, { 0 } }, /* swallow focused into next client */
+{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_A, toggleautoswallow, { 0 } }, /* toggle auto-swallow */
 
   /* window kill */
   { MODKEY, XKB_KEY_q, killclient, { 0 } },
