@@ -12,7 +12,9 @@ jobs:
       contents: write
     steps:
       - name: Install build dependencies
-        run: pacman -Syyu --noconfirm base-devel git wlroots0.19 wayland wayland-protocols libinput libxcb xcb-util-wm pkgconf
+        run: pacman -Syyu --noconfirm base-devel git wayland wayland-protocols libinput libxcb xcb-util-wm pkgconf
+      - name: Install wlroots0.19 from package archive (dropped from live extra repo)
+        run: pacman -U --noconfirm https://archive.archlinux.org/packages/w/wlroots0.19/wlroots0.19-0.19.3-1-x86_64.pkg.tar.zst
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # need full history + tags for major-bump detection
