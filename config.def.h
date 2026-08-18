@@ -6,6 +6,9 @@
 /* appearance */
 static const int sloppyfocus = 1; /* focus follows mouse */
 static const int bypass_surface_visibility = 0;
+static const int smartgaps = 0; /* 1 means no outer gap when there is only one window */
+static int gaps = 1; /* 1 means gaps between windows are added */
+static const unsigned int gappx = 6; /* gap pixel between windows */
 static const unsigned int borderpx = 0; /* window border width */
 static const unsigned int systrayspacing = 2; /* systray spacing */
 static const int showsystray = 1; /* 0 means no systray */
@@ -89,6 +92,8 @@ static const enum libinput_config_accel_profile accel_profile
 static const double accel_speed = 0.0;
 static const enum libinput_config_tap_button_map button_map
     = LIBINPUT_CONFIG_TAP_MAP_LRM;
+
+static const int cursor_timeout = 5; /* hide cursor after N seconds idle */
 
 #define MODKEY WLR_MODIFIER_LOGO /* Super/Windows key */
 
@@ -195,6 +200,7 @@ static const Key keys[] = {
   { MODKEY, XKB_KEY_e, togglefullscreen, { 0 } }, /* fullscreen */
 { MODKEY, XKB_KEY_a, toggleswallow, { 0 } }, /* swallow focused into next client */
 { MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_A, toggleautoswallow, { 0 } }, /* toggle auto-swallow */
+{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_G, togglegaps, { 0 } }, /* toggle gaps */
 
   /* window kill */
   { MODKEY, XKB_KEY_q, killclient, { 0 } },
