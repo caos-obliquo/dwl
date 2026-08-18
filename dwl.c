@@ -377,6 +377,7 @@ static void fullscreennotify(struct wl_listener *listener, void *data);
 static void gpureset(struct wl_listener *listener, void *data);
 static void handlecursoractivity(void);
 static int hidecursor(void *data);
+static void cursorimage_destroy(struct wl_listener *listener, void *data);
 static void handlesig(int signo);
 static void incnmaster(const Arg *arg);
 static void inputdevice(struct wl_listener *listener, void *data);
@@ -516,6 +517,7 @@ static struct {
 	int hotspot_x;
 	int hotspot_y;
 } last_cursor;
+static struct wl_listener cursor_destroy;
 
 static struct wlr_scene_rect *root_bg;
 static struct wlr_session_lock_manager_v1 *session_lock_mgr;
@@ -652,7 +654,7 @@ applyrules(Client *c)
 
 	c->isfloating |= client_is_float_type(c);
 	if (enableautoswallow && !c->noswallow && !c->isfloating &&
-			!c->surface.xdg->initial_commit) {
+			!client_is_x11(c) && !c->surface.xdg->initial_commit) {
 		Client *p = termforwin(c);
 		if (p)
 			swallow(c, p);
@@ -2397,6 +2399,15 @@ hidecursor(void *data)
 }
 
 void
+cursorimage_destroy(struct wl_listener *listener, void *data)
+{
+	/* the cached cursor surface is gone: drop the reference so a later
+	 * un-hide cannot restore a dangling pointer */
+	if (last_cursor.surface == data)
+		last_cursor.surface = NULL;
+}
+
+void
 incnmaster(const Arg *arg)
 {
 	if (!arg || !selmon)
@@ -2923,11 +2934,11 @@ apply_or_test:
 }
 
 void
- outputmgrtest(struct wl_listener *listener, void *data)
- {
- 	struct wlr_output_configuration_v1 *config = data;
- 	outputmgrapplyortest(config, 1);
- }
+outputmgrtest(struct wl_listener *listener, void *data)
+{
+	struct wlr_output_configuration_v1 *config = data;
+	outputmgrapplyortest(config, 1);
+}
 
 pid_t
 parentpid(pid_t pid)
@@ -2938,7 +2949,9 @@ parentpid(pid_t pid)
 	snprintf(buf, sizeof(buf) - 1, "/proc/%u/stat", (unsigned)pid);
 	if (!(f = fopen(buf, "r")))
 		return 0;
-	fscanf(f, "%*u %*s %*c %u", &v);
+	/* comm may contain spaces/parens; parse the name up to the closing ')' */
+	if (fscanf(f, "%*u %*[^)]) %*c %*c %u", &v) != 1)
+		v = 0;
 	fclose(f);
 	return (pid_t)v;
 }
@@ -3162,10 +3175,13 @@ setcursor(struct wl_listener *listener, void *data)
 	 * hardware cursor on the output that it's currently on and continue to
 	 * do so as the cursor moves between outputs. */
 	if (event->seat_client == seat->pointer_state.focused_client) {
+		if (cursor_destroy.link.prev)
+			wl_list_remove(&cursor_destroy.link);
 		last_cursor.shape = 0;
 		last_cursor.surface = event->surface;
 		last_cursor.hotspot_x = event->hotspot_x;
 		last_cursor.hotspot_y = event->hotspot_y;
+		wl_signal_add(&event->surface->events.destroy, &cursor_destroy);
 
 		if (!cursor_hidden)
 			wlr_cursor_set_surface(cursor, event->surface,
@@ -3183,6 +3199,8 @@ setcursorshape(struct wl_listener *listener, void *data)
 	 * actually has pointer focus first. If so, we can tell the cursor to
 	 * use the provided cursor shape. */
 	if (event->seat_client == seat->pointer_state.focused_client) {
+		if (cursor_destroy.link.prev)
+			wl_list_remove(&cursor_destroy.link);
 		last_cursor.shape = event->shape;
 		last_cursor.surface = NULL;
 
@@ -3506,6 +3524,7 @@ setup(void)
 
 	hide_source = wl_event_loop_add_timer(wl_display_get_event_loop(dpy),
 			hidecursor, cursor);
+	cursor_destroy.notify = cursorimage_destroy;
 
 	/*
 	 * Configures a seat, which is a single "seat" at which a user sits and
@@ -3697,12 +3716,12 @@ tag(const Arg *arg)
 }
 
 void
- tagmon(const Arg *arg)
- {
- 	Client *sel = focustop(selmon);
- 	if (sel)
- 		setmon(sel, dirtomon(arg->i), 0);
- }
+tagmon(const Arg *arg)
+{
+	Client *sel = focustop(selmon);
+	if (sel)
+		setmon(sel, dirtomon(arg->i), 0);
+}
 
 Client *
 termforwin(Client *c)
@@ -3774,6 +3793,88 @@ tile(Monitor *m)
 			resize(c, (struct wlr_box){.x = m->w.x + mw, .y = m->w.y + ty,
 				.width = m->w.width - mw - gappx*e, .height = h}, 0);
 			ty += c->geom.height + gappx*e;
+		}
+		i++;
+	}
+}
+
+void
+bstack(Monitor *m)
+{
+	int w, h, mh, mx, tx, ty, tw;
+	int i, n = 0;
+	Client *c;
+
+	wl_list_for_each(c, &clients, link)
+		if (VISIBLEON(c, m) && !c->isfloating)
+			n++;
+	if (n == 0)
+		return;
+
+	if (n > m->nmaster) {
+		mh = (int)round(m->nmaster ? m->mfact * m->w.height : 0);
+		tw = m->w.width / (n - m->nmaster);
+		ty = m->w.y + mh;
+	} else {
+		mh = m->w.height;
+		tw = m->w.width;
+		ty = m->w.y;
+	}
+
+	i = mx = 0;
+	tx = m->w.x;
+	wl_list_for_each(c, &clients, link) {
+		if (!VISIBLEON(c, m) || c->isfloating)
+			continue;
+		if (i < m->nmaster) {
+			w = (m->w.width - mx) / (MIN(n, m->nmaster) - i);
+			resize(c, (struct wlr_box) { .x = m->w.x + mx, .y = m->w.y, .width = w, .height = mh }, 0);
+			mx += c->geom.width;
+		} else {
+			h = m->w.height - mh;
+			resize(c, (struct wlr_box) { .x = tx, .y = ty, .width = tw, .height = h }, 0);
+			if (tw != m->w.width)
+				tx += c->geom.width;
+		}
+		i++;
+	}
+}
+
+void
+bstackhoriz(Monitor *m)
+{
+	int w, mh, mx, tx, ty, th;
+	int i, n = 0;
+	Client *c;
+
+	wl_list_for_each(c, &clients, link)
+		if (VISIBLEON(c, m) && !c->isfloating)
+			n++;
+	if (n == 0)
+		return;
+
+	if (n > m->nmaster) {
+		mh = (int)round(m->nmaster ? m->mfact * m->w.height : 0);
+		th = (m->w.height - mh) / (n - m->nmaster);
+		ty = m->w.y + mh;
+	} else {
+		th = mh = m->w.height;
+		ty = m->w.y;
+	}
+
+	i = mx = 0;
+	tx = m->w.x;
+	wl_list_for_each(c, &clients, link) {
+		if (!VISIBLEON(c, m) || c->isfloating)
+			continue;
+		if (i < m->nmaster) {
+			w = (m->w.width - mx) / (MIN(n, m->nmaster) - i);
+			resize(c, (struct wlr_box) { .x = m->w.x + mx, .y = m->w.y, .width = w, .height = mh }, 0);
+			mx += c->geom.width;
+		} else {
+			resize(c, (struct wlr_box) { .x = tx, .y = ty, .width = m->w.width, .height = th }, 0);
+			if (th != m->w.height)
+				ty += c->geom.height;
 		}
 		i++;
 	}
@@ -4370,86 +4471,4 @@ main(int argc, char *argv[])
 
 usage:
 	die("Usage: %s [-v] [-d] [-s startup command]", argv[0]);
-}
-
-void
-bstack(Monitor *m)
-{
-	int w, h, mh, mx, tx, ty, tw;
-	int i, n = 0;
-	Client *c;
-
-	wl_list_for_each(c, &clients, link)
-		if (VISIBLEON(c, m) && !c->isfloating)
-			n++;
-	if (n == 0)
-		return;
-
-	if (n > m->nmaster) {
-		mh = (int)round(m->nmaster ? m->mfact * m->w.height : 0);
-		tw = m->w.width / (n - m->nmaster);
-		ty = m->w.y + mh;
-	} else {
-		mh = m->w.height;
-		tw = m->w.width;
-		ty = m->w.y;
-	}
-
-	i = mx = 0;
-	tx = m->w.x;
-	wl_list_for_each(c, &clients, link) {
-		if (!VISIBLEON(c, m) || c->isfloating)
-			continue;
-		if (i < m->nmaster) {
-			w = (m->w.width - mx) / (MIN(n, m->nmaster) - i);
-			resize(c, (struct wlr_box) { .x = m->w.x + mx, .y = m->w.y, .width = w, .height = mh }, 0);
-			mx += c->geom.width;
-		} else {
-			h = m->w.height - mh;
-			resize(c, (struct wlr_box) { .x = tx, .y = ty, .width = tw, .height = h }, 0);
-			if (tw != m->w.width)
-				tx += c->geom.width;
-		}
-		i++;
-	}
-}
-
-void
-bstackhoriz(Monitor *m)
-{
-	int w, mh, mx, tx, ty, th;
-	int i, n = 0;
-	Client *c;
-
-	wl_list_for_each(c, &clients, link)
-		if (VISIBLEON(c, m) && !c->isfloating)
-			n++;
-	if (n == 0)
-		return;
-
-	if (n > m->nmaster) {
-		mh = (int)round(m->nmaster ? m->mfact * m->w.height : 0);
-		th = (m->w.height - mh) / (n - m->nmaster);
-		ty = m->w.y + mh;
-	} else {
-		th = mh = m->w.height;
-		ty = m->w.y;
-	}
-
-	i = mx = 0;
-	tx = m->w.x;
-	wl_list_for_each(c, &clients, link) {
-		if (!VISIBLEON(c, m) || c->isfloating)
-			continue;
-		if (i < m->nmaster) {
-			w = (m->w.width - mx) / (MIN(n, m->nmaster) - i);
-			resize(c, (struct wlr_box) { .x = m->w.x + mx, .y = m->w.y, .width = w, .height = mh }, 0);
-			mx += c->geom.width;
-		} else {
-			resize(c, (struct wlr_box) { .x = tx, .y = ty, .width = m->w.width, .height = th }, 0);
-			if (th != m->w.height)
-				ty += c->geom.height;
-		}
-		i++;
-	}
 }

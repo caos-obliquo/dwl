@@ -19,6 +19,8 @@ static const int topbar = 1; /* 0 means bottom bar */
 /* Dracula theme — bar colors: fg, bg, border (uint32_t ARGB, alpha baked in) */
 static const float rootcolor[] = COLOR (0x222222ff);
 static const float fullscreen_bg[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+static int enableautoswallow = 1; /* enables autoswallowing newly spawned clients */
+static float swallowborder = 1.0f; /* add this multiplied by borderpx to border when a client is swallowed */
 static const float default_opacity = 1.0f;
 static const char *fonts[] = { "JetBrainsMono Nerd Font:size=16" };
 static uint32_t colors[][3] = {
