@@ -78,6 +78,7 @@
 #include "dbus.h"
 #include "systray/tray.h"
 #include "systray/watcher.h"
+#include "dwl-ipc-unstable-v2-protocol.h"
 
 /* macros */
 #define MAX(A, B)               ((A) > (B) ? (A) : (B))
@@ -225,6 +226,7 @@ struct Monitor {
 		float scale;
 	} b; /* bar area */
 	Tray *tray;
+	struct wl_list dwl_ipc_outputs; /* DwlIpcOutput.link */
 	struct wlr_box w; /* window area, layout-relative */
 	struct wl_list layers[4]; /* LayerSurface.link */
 	const Layout *lt[2];
@@ -241,6 +243,12 @@ struct Monitor {
 	Buffer *pool[2];
 	int lrpad;
 };
+
+typedef struct DwlIpcOutput {
+	struct wl_list link;
+	struct wl_resource *resource;
+	Monitor *mon;
+} DwlIpcOutput;
 
 typedef struct {
 	const char *name;
@@ -326,6 +334,25 @@ static void destroypointerconstraint(struct wl_listener *listener, void *data);
 static void destroysessionlock(struct wl_listener *listener, void *data);
 static void destroykeyboardgroup(struct wl_listener *listener, void *data);
 static Monitor *dirtomon(enum wlr_direction dir);
+static void dwl_ipc_manager_bind(struct wl_client *client, void *data,
+		uint32_t version, uint32_t id);
+static void dwl_ipc_manager_destroy(struct wl_resource *resource);
+static void dwl_ipc_manager_get_output(struct wl_client *client,
+		struct wl_resource *resource, uint32_t id, struct wl_resource *output);
+static void dwl_ipc_manager_release(struct wl_client *client,
+		struct wl_resource *resource);
+static void dwl_ipc_output_destroy(struct wl_resource *resource);
+static void dwl_ipc_output_printstatus(Monitor *monitor);
+static void dwl_ipc_output_printstatus_to(DwlIpcOutput *ipc_output);
+static void dwl_ipc_output_release(struct wl_client *client,
+		struct wl_resource *resource);
+static void dwl_ipc_output_send_bar_geometry(Monitor *m, int tw, int traywidth, int title_x);
+static void dwl_ipc_output_set_client_tags(struct wl_client *client,
+		struct wl_resource *resource, uint32_t and_tags, uint32_t xor_tags);
+static void dwl_ipc_output_set_layout(struct wl_client *client,
+		struct wl_resource *resource, uint32_t index);
+static void dwl_ipc_output_set_tags(struct wl_client *client,
+		struct wl_resource *resource, uint32_t tagmask, uint32_t toggle_tagset);
 static void remove_outer_separators(char **str);
 static void appiconsappend(char **str, const char *appicon, size_t new_size);
 static void applyappicon(char *tag_icons[], unsigned int *icons_per_tag, const Client *c);
@@ -411,6 +438,18 @@ static Monitor *xytomon(double x, double y);
 static void xytonode(double x, double y, struct wlr_surface **psurface,
 		Client **pc, LayerSurface **pl, double *nx, double *ny);
 static void zoom(const Arg *arg);
+
+static struct zdwl_ipc_manager_v2_interface dwl_manager_implementation = {
+	.release = dwl_ipc_manager_release,
+	.get_output = dwl_ipc_manager_get_output,
+};
+
+static struct zdwl_ipc_output_v2_interface dwl_output_implementation = {
+	.release = dwl_ipc_output_release,
+	.set_tags = dwl_ipc_output_set_tags,
+	.set_layout = dwl_ipc_output_set_layout,
+	.set_client_tags = dwl_ipc_output_set_client_tags,
+};
 
 /* variables */
 static pid_t child_pid = -1;
@@ -942,6 +981,7 @@ cleanupmon(struct wl_listener *listener, void *data)
 {
 	Monitor *m = wl_container_of(listener, m, destroy);
 	LayerSurface *l, *tmp;
+	DwlIpcOutput *ipc_output, *ipc_output_tmp;
 	size_t i;
 
 	/* m->layers[i] are intentionally not unlinked */
@@ -949,6 +989,9 @@ cleanupmon(struct wl_listener *listener, void *data)
 		wl_list_for_each_safe(l, tmp, &m->layers[i], link)
 			wlr_layer_surface_v1_destroy(l->layer_surface);
 	}
+
+	wl_list_for_each_safe(ipc_output, ipc_output_tmp, &m->dwl_ipc_outputs, link)
+		wl_resource_destroy(ipc_output->resource);
 
 	for (i = 0; i < LENGTH(m->pool); i++)
 		wlr_buffer_drop(&m->pool[i]->base);
@@ -1279,6 +1322,7 @@ createmon(struct wl_listener *listener, void *data)
 	m = wlr_output->data = ecalloc(1, sizeof(*m));
 	m->wlr_output = wlr_output;
 	m->tag_icons = ecalloc(LENGTH(tags), sizeof(char *));
+	wl_list_init(&m->dwl_ipc_outputs);
 
 	for (i = 0; i < LENGTH(m->layers); i++)
 		wl_list_init(&m->layers[i]);
@@ -1636,6 +1680,202 @@ dirtomon(enum wlr_direction dir)
 }
 
 static void
+dwl_ipc_manager_bind(struct wl_client *client, void *data, uint32_t version, uint32_t id)
+{
+	struct wl_resource *resource = wl_resource_create(client,
+		&zdwl_ipc_manager_v2_interface, version, id);
+	size_t i;
+
+	if (!resource) {
+		wl_client_post_no_memory(client);
+		return;
+	}
+	wl_resource_set_implementation(resource, &dwl_manager_implementation,
+		NULL, dwl_ipc_manager_destroy);
+
+	zdwl_ipc_manager_v2_send_tags(resource, LENGTH(tags));
+	for (i = 0; i < LENGTH(layouts); i++)
+		zdwl_ipc_manager_v2_send_layout(resource, layouts[i].symbol);
+}
+
+static void
+dwl_ipc_manager_destroy(struct wl_resource *resource)
+{
+	/* no-op */
+}
+
+static void
+dwl_ipc_manager_get_output(struct wl_client *client, struct wl_resource *resource,
+		uint32_t id, struct wl_resource *output)
+{
+	Monitor *monitor = wlr_output_from_resource(output)->data;
+	struct wl_resource *output_resource = wl_resource_create(client,
+		&zdwl_ipc_output_v2_interface, wl_resource_get_version(resource), id);
+	DwlIpcOutput *ipc_output;
+
+	if (!output_resource) {
+		wl_client_post_no_memory(client);
+		return;
+	}
+	ipc_output = ecalloc(1, sizeof(*ipc_output));
+	ipc_output->resource = output_resource;
+	ipc_output->mon = monitor;
+	wl_resource_set_implementation(output_resource, &dwl_output_implementation,
+		ipc_output, dwl_ipc_output_destroy);
+	wl_list_insert(&monitor->dwl_ipc_outputs, &ipc_output->link);
+	dwl_ipc_output_printstatus_to(ipc_output);
+}
+
+static void
+dwl_ipc_manager_release(struct wl_client *client, struct wl_resource *resource)
+{
+	wl_resource_destroy(resource);
+}
+
+static void
+dwl_ipc_output_destroy(struct wl_resource *resource)
+{
+	DwlIpcOutput *ipc_output = wl_resource_get_user_data(resource);
+
+	wl_list_remove(&ipc_output->link);
+	free(ipc_output);
+}
+
+static void
+dwl_ipc_output_printstatus(Monitor *monitor)
+{
+	DwlIpcOutput *ipc_output;
+
+	wl_list_for_each(ipc_output, &monitor->dwl_ipc_outputs, link)
+		dwl_ipc_output_printstatus_to(ipc_output);
+}
+
+static void
+dwl_ipc_output_printstatus_to(DwlIpcOutput *ipc_output)
+{
+	Monitor *monitor = ipc_output->mon;
+	Client *focused = focustop(monitor);
+	Client *c;
+	const char *title;
+	const char *appid;
+	uint32_t state = 0;
+	uint32_t numclients = 0;
+	uint32_t focused_client = 0;
+	uint32_t tagmask = 0;
+	size_t i;
+
+	zdwl_ipc_output_v2_send_active(ipc_output->resource, monitor == selmon);
+
+	for (i = 0; i < LENGTH(tags); i++) {
+		tagmask = 1 << i;
+		state = 0;
+		numclients = 0;
+		focused_client = 0;
+		if (tagmask & monitor->tagset[monitor->seltags])
+			state |= ZDWL_IPC_OUTPUT_V2_TAG_STATE_ACTIVE;
+		wl_list_for_each(c, &clients, link) {
+			if (c->mon != monitor || !(c->tags & tagmask))
+				continue;
+			numclients++;
+			if (c->isurgent)
+				state |= ZDWL_IPC_OUTPUT_V2_TAG_STATE_URGENT;
+			if (c == focused)
+				focused_client = 1;
+		}
+		zdwl_ipc_output_v2_send_tag(ipc_output->resource, i, state, numclients, focused_client);
+	}
+
+	title = focused ? client_get_title(focused) : "";
+	appid = focused ? client_get_appid(focused) : "";
+	zdwl_ipc_output_v2_send_layout(ipc_output->resource, monitor->lt[monitor->sellt] - layouts);
+	zdwl_ipc_output_v2_send_title(ipc_output->resource, title);
+	zdwl_ipc_output_v2_send_appid(ipc_output->resource, appid);
+	zdwl_ipc_output_v2_send_layout_symbol(ipc_output->resource, monitor->ltsymbol);
+	if (wl_resource_get_version(ipc_output->resource) >= ZDWL_IPC_OUTPUT_V2_FULLSCREEN_SINCE_VERSION)
+		zdwl_ipc_output_v2_send_fullscreen(ipc_output->resource, focused ? focused->isfullscreen : 0);
+	if (wl_resource_get_version(ipc_output->resource) >= ZDWL_IPC_OUTPUT_V2_FLOATING_SINCE_VERSION)
+		zdwl_ipc_output_v2_send_floating(ipc_output->resource, focused ? focused->isfloating : 0);
+	zdwl_ipc_output_v2_send_frame(ipc_output->resource);
+}
+
+static void
+dwl_ipc_output_send_bar_geometry(Monitor *m, int tw, int traywidth, int title_x)
+{
+	DwlIpcOutput *ipc_output;
+	int middle_width = m->b.width - (tw + traywidth + title_x);
+	uint32_t middle_x = (uint32_t)(title_x / m->wlr_output->scale);
+	uint32_t middle_width_logical = (uint32_t)((middle_width > 0 ? middle_width : 0) / m->wlr_output->scale);
+	uint32_t bar_height = m->b.real_height;
+	uint32_t bg_color = colors[SchemeNorm][1];
+	uint32_t fg_color = colors[SchemeNorm][0];
+
+	wl_list_for_each(ipc_output, &m->dwl_ipc_outputs, link)
+		zdwl_ipc_output_v2_send_bar_geometry(ipc_output->resource,
+			middle_x, middle_width_logical, bar_height, bg_color, fg_color);
+}
+
+static void
+dwl_ipc_output_set_client_tags(struct wl_client *client, struct wl_resource *resource,
+		uint32_t and_tags, uint32_t xor_tags)
+{
+	DwlIpcOutput *ipc_output = wl_resource_get_user_data(resource);
+	Monitor *monitor = ipc_output->mon;
+	Client *selected_client = focustop(monitor);
+	uint32_t newtags;
+
+	if (!selected_client)
+		return;
+	newtags = (selected_client->tags & and_tags) ^ xor_tags;
+	if (!newtags)
+		return;
+	selected_client->tags = newtags;
+	if (selmon == monitor)
+		focusclient(focustop(monitor), 1);
+	arrange(monitor);
+	drawbars();
+}
+
+static void
+dwl_ipc_output_set_layout(struct wl_client *client, struct wl_resource *resource, uint32_t index)
+{
+	DwlIpcOutput *ipc_output = wl_resource_get_user_data(resource);
+	Monitor *monitor = ipc_output->mon;
+
+	if (index >= LENGTH(layouts))
+		return;
+	if (index != monitor->lt[monitor->sellt] - layouts)
+		monitor->sellt ^= 1;
+	monitor->lt[monitor->sellt] = &layouts[index];
+	arrange(monitor);
+	drawbars();
+}
+
+static void
+dwl_ipc_output_set_tags(struct wl_client *client, struct wl_resource *resource,
+		uint32_t tagmask, uint32_t toggle_tagset)
+{
+	DwlIpcOutput *ipc_output = wl_resource_get_user_data(resource);
+	Monitor *monitor = ipc_output->mon;
+	uint32_t newtags = tagmask & TAGMASK;
+
+	if (!newtags || newtags == monitor->tagset[monitor->seltags])
+		return;
+	if (toggle_tagset)
+		monitor->seltags ^= 1;
+	monitor->tagset[monitor->seltags] = newtags;
+	if (selmon == monitor)
+		focusclient(focustop(monitor), 1);
+	arrange(monitor);
+	drawbars();
+}
+
+static void
+dwl_ipc_output_release(struct wl_client *client, struct wl_resource *resource)
+{
+	wl_resource_destroy(resource);
+}
+
+static void
 remove_outer_separators(char **str)
 {
 	const char *clean_tag_name_beg = *str + 1;
@@ -1677,10 +1917,18 @@ applyappicon(char *tag_icons[], unsigned int *icons_per_tag, const Client *c)
 
 	for (unsigned t = 1, i = 0; i < LENGTH(tags); t <<= 1, i++) {
 		if (c->tags & t) {
+			/* Check if this appicon is already present for this tag */
+			bool already_present = false;
+			if (icons_per_tag[i] > 0 && c->appicon && tag_icons[i]) {
+				/* Check if the appicon is already in the tag_icons string */
+				if (strstr(tag_icons[i], c->appicon))
+					already_present = true;
+			}
+
 			if (icons_per_tag[i] == 0) {
 				free(tag_icons[i]);
 				tag_icons[i] = strndup(c->appicon, strlen(c->appicon));
-			} else {
+			} else if (!already_present) {
 				char *icon = NULL;
 				if (icons_per_tag[i] < truncate_icons_after)
 					icon = c->appicon;
@@ -1726,9 +1974,11 @@ drawbar(Monitor *m)
 	if (!(buf = bufmon(m)))
 		return;
 
+	dwl_ipc_output_printstatus(m);
+
 	/* draw status first so it can be overdrawn by tags later */
+	traywidth = showsystray ? tray_get_width(m->tray) : 0;
 	if (m == selmon) { /* status is only drawn on selected monitor */
-		traywidth = tray_get_width(m->tray);
 		tw = drawstatus(m, traywidth);
 	}
 
@@ -1764,6 +2014,9 @@ drawbar(Monitor *m)
 	w = TEXTW(m, m->ltsymbol);
 	drwl_setscheme(m->drw, colors[SchemeNorm]);
 	x = drwl_text(m->drw, x, 0, w, m->b.height, m->lrpad / 2, m->ltsymbol, 0);
+
+	/* publish the middle title area (tags+layout symbol → status/tray) */
+	dwl_ipc_output_send_bar_geometry(m, m == selmon ? tw : 0, traywidth, x);
 
 	if ((w = m->b.width - (tw + x + traywidth)) > m->b.height) {
 		if (c) {
@@ -3180,6 +3433,8 @@ setup(void)
 	wl_signal_add(&output_mgr->events.apply, &output_mgr_apply);
 	wl_signal_add(&output_mgr->events.test, &output_mgr_test);
 
+	wl_global_create(dpy, &zdwl_ipc_manager_v2_interface, 2, NULL, dwl_ipc_manager_bind);
+
 	drwl_init();
 
 	status_event_source = wl_event_loop_add_fd(wl_display_get_event_loop(dpy),
@@ -3591,61 +3846,6 @@ m->b.scale = m->wlr_output->scale;
 	m->lrpad = m->drw->font->height;
 	m->b.height = m->drw->font->height + 2;
 	m->b.real_height = (int)((float)m->b.height / m->wlr_output->scale);
-
-/* publish the logical bar height + middle section geometry so wmenu's
-		 * launcher pill can match the title area exactly */
-	{
-		/* compute middle_x (after tags+layout) and middle_width (title area) */
-		int tw = 0;
-		if (m == selmon) {
-			/* compute status width like drawstatus does */
-			char rstext[512] = "";
-			char *p;
-			for (p = stext; *p; p++) {
-				if (PREFIX(p, "^^")) { strncat(rstext, p, 2); p++; }
-				else if (PREFIX(p, "^fg(") || PREFIX(p, "^bg(")) {
-					char *argend = strchr(p, ')');
-					if (!argend) { p = strchr(p, '('); }
-					else { p = argend; }
-				} else { strncat(rstext, p, 1); }
-			}
-			tw = TEXTW(m, rstext) - m->lrpad;
-		}
-		/* compute tag widths (like drawbar) */
-		unsigned int icons_per_tag[LENGTH(tags)] = {0};
-		Client *c;
-		wl_list_for_each(c, &clients, link) {
-			if (c->mon != m) continue;
-			if (c->appicon && strlen(c->appicon) > 0)
-				applyappicon(m->tag_icons, icons_per_tag, c);
-		}
-		int x = 0, w = 0;
-		for (size_t i = 0; i < LENGTH(tags); i++) {
-			w = TEXTW(m, m->tag_icons[i]);
-			x += w;
-		}
-		w = TEXTW(m, m->ltsymbol);
-		x += w;
-		/* tray width */
-		int traywidth = showsystray ? tray_get_width(m->tray) : 0;
-		/* middle section bounds (bar-relative) */
-		int middle_x = x;
-		int middle_width = m->b.width - (tw + x + m->lrpad + 2 + traywidth);
-		if (middle_width < 0) middle_width = 0;
-		/* absolute positions on output (for wmenu layer shell) */
-		int abs_middle_x = m->m.x + middle_x;
-		int abs_middle_width = middle_width;
-
-		FILE *f = fopen("/tmp/dwl-bar-geometry", "w");
-		if (f) {
-			uint32_t middle_bg = colors[SchemeNorm][1];
-			uint32_t fg = colors[SchemeNorm][0];
-			/* Format: abs_middle_x abs_middle_width bar_height middle_bg_argb fg_argb */
-			fprintf(f, "%d %d %d %08x %08x\n", abs_middle_x, abs_middle_width,
-			        m->b.real_height, middle_bg, fg);
-			fclose(f);
-		}
-	}
 
 	if (showsystray) {
 		if (m->tray)
