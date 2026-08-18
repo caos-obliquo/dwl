@@ -2003,7 +2003,8 @@ drawbar(Monitor *m)
 	c = focustop(m);
 	for (i = 0; i < LENGTH(tags); i++) {
 		w = TEXTW(m, m->tag_icons[i]);
-		drwl_setscheme(m->drw, colors[m->tagset[m->seltags] & 1 << i ? SchemeSel : SchemeNorm]);
+		/* all tags are pills: purple bg, dark fg (Dracula SchemeSel) regardless of tagset/occupancy */
+		drwl_setscheme(m->drw, colors[SchemeSel]);
 		drwl_text(m->drw, x, 0, w, m->b.height, m->lrpad / 2, m->tag_icons[i], urg & 1 << i);
 		if (occ & 1 << i && icons_per_tag[i] == 0)
 			drwl_rect(m->drw, x + boxs, boxs, boxw, boxw,
