@@ -17,6 +17,8 @@ Apply with `patch -p1 < patches/<name>/<name>.patch` from the repo root, then
 | `movestack` | `Super+Shift+J/K` reorder stack | dwl-patches 0.8 |
 | `warpcursor` | Cursor follows keyboard focus | dwl-patches (style-normalized) |
 | `alwayscenter` | Floating windows spawn centered | dwl-patches (extended) |
+| `bar` | Native status bar (sewn's dwl bar clone): tags, layout symbol, title, status via stdin with `^fg()`/`^bg()` markup, click regions | dwl-patches (sewn) |
+| `bar-systray` | StatusNotifier system tray on the bar (DBus); left-click activate, right-click menu via `dmenucmd` | dwl-patches (vetu104), ported 0.7→0.8-dev |
 
 ## Notes
 
