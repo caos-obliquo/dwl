@@ -238,7 +238,10 @@ static const Key keys[] = {
   { 0, XKB_KEY_XF86MonBrightnessDown, spawn, { .v = brightnessdown } },
   { 0, XKB_KEY_XF86MonBrightnessUp, spawn, { .v = brightnessup } },
 
-  /* volume - FN+F6/F7/F8 (media keys only, no plain F-keys) */
+  /* volume - F6 mute / F7 down / F8 up + media keys */
+  { 0, XKB_KEY_F6, spawn, { .v = volumemute } },
+  { 0, XKB_KEY_F7, spawn, { .v = volumedown } },
+  { 0, XKB_KEY_F8, spawn, { .v = volumeup } },
   { 0, XKB_KEY_XF86AudioMute, spawn, { .v = volumemute } },
   { 0, XKB_KEY_XF86AudioLowerVolume, spawn, { .v = volumedown } },
   { 0, XKB_KEY_XF86AudioRaiseVolume, spawn, { .v = volumeup } },
