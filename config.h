@@ -204,8 +204,6 @@ static const Key keys[] = {
     togglefloating,
     { 0 } },                                      /* toggle float */
   { MODKEY, XKB_KEY_e, togglefullscreen, { 0 } }, /* fullscreen */
-{ MODKEY, XKB_KEY_a, toggleswallow, { 0 } }, /* swallow focused into next client */
-{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_A, toggleautoswallow, { 0 } }, /* toggle auto-swallow */
 { MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_G, togglegaps, { 0 } }, /* toggle gaps */
 
   /* window kill */

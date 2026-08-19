@@ -434,8 +434,6 @@ static void togglebar(const Arg *arg);
 static void togglefloating(const Arg *arg);
 static void togglefullscreen(const Arg *arg);
 static void togglegaps(const Arg *arg);
-static void toggleswallow(const Arg *arg);
-static void toggleautoswallow(const Arg *arg);
 static void toggletag(const Arg *arg);
 static void toggleview(const Arg *arg);
 static void trayactivate(const Arg *arg);
@@ -3810,32 +3808,6 @@ togglegaps(const Arg *arg)
 {
 	selmon->gaps = !selmon->gaps;
 	arrange(selmon);
-}
-
-void
-toggleswallow(const Arg *arg)
-{
-	Client *c, *sel = focustop(selmon);
-	if (!sel)
-		return;
-
-	if (sel->swallowing) {
-		swallow(sel, NULL);
-	} else {
-		wl_list_for_each(c, &sel->flink, flink) {
-			if (&c->flink == &fstack)
-				continue; /* wrap past the sentinel node */
-			if (VISIBLEON(c, selmon))
-				break; /* found it */
-		}
-		swallow(sel, c);
-	}
-}
-
-void
-toggleautoswallow(const Arg *arg)
-{
-	enableautoswallow = !enableautoswallow;
 }
 
 void
