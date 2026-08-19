@@ -47,7 +47,7 @@ static const Rule rules[] = {
   { NULL, NULL, 0, 0, 1.0f, 0, 0, -1, "󱂚" }, /* generic fallback icon for unmatched apps */
   { "foot", NULL, 0, 0, 1.0f, 1, 1, -1, "󰆍" },
   { "wmenu-center", NULL, 0, 1, 0.85f, 0, 0, -1, NULL },
-  { "waterfox", NULL, 1 << 8, 0, 1.0f, 0, 0, -1, "󰈹" },
+  { "waterfox", NULL, 0, 0, 1.0f, 0, 0, -1, "󰈹" },
   { "chromium", NULL, 0, 0, 1.0f, 0, 0, -1, "󰊯" },
   { "steam", NULL, 0, 0, 1.0f, 0, 0, -1, "" },
   { "youtui", NULL, 0, 0, 1.0f, 0, 0, -1, "󰑈" },
