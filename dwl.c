@@ -4055,6 +4055,19 @@ void
 updatetitle(struct wl_listener *listener, void *data)
 {
 	Client *c = wl_container_of(listener, c, set_title);
+	const char *appid = client_get_appid(c);
+	const char *title = client_get_title(c);
+	const Rule *r;
+
+	/* re-evaluate the appicon when the title changes so title-matched
+	 * appicon rules fire for apps run inside tmux (set-titles changes the
+	 * window title, not the app id); no break = last matching rule wins,
+	 * matching applyrules()'s semantics; only c->appicon is touched */
+	for (r = rules; r < END(rules); r++)
+		if ((!r->title || strstr(title, r->title))
+				&& (!r->id || strstr(appid, r->id)))
+			c->appicon = (char *)r->appicon;
+
 	if (c == focustop(c->mon))
 		drawbars();
 }
