@@ -50,6 +50,8 @@ static const Rule rules[] = {
   { "chromium", NULL, 0, 0, 1.0f, 0, 0, -1, "󰊯" },
   { "steam", "steam", 0, 0, 1.0f, 0, 0, -1, "" },
   { "youtui", NULL, 0, 0, 1.0f, 0, 0, -1, "󰑈" },
+  { NULL, "pipemixer", 0, 0, 1.0f, 0, 0, -1, "󰄠" },
+  { NULL, "bluetoothctl", 0, 0, 1.0f, 0, 0, -1, "" },
 };
 
 /* layouts: tile, floating, monocle */
