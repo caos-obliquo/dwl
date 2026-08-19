@@ -7,7 +7,7 @@
 static const int sloppyfocus = 1; /* focus follows mouse */
 static const int bypass_surface_visibility = 0;
 static const int smartgaps = 0; /* 1 means no outer gap when there is only one window */
-static int gaps = 1; /* 1 means gaps between windows are added */
+static int gaps = 0; /* 1 means gaps between windows are added */
 static const unsigned int gappx = 6; /* gap pixel between windows */
 static const unsigned int borderpx = 0; /* window border width */
 static const unsigned int systrayspacing = 2; /* systray spacing */
