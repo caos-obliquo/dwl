@@ -101,8 +101,7 @@ Each bind grepped directly from `builds/dwl-user/config.h`:
 | `Super+Shift+U` | bottomstack-horiz (`===`) | `config.h:200` (`setlayout &layouts[4]`) |
 | `Super+o` / `Super+Shift+O` | `setopacity` +0.1 / -0.1 | `config.h:191-192` |
 | `Super+b` | `spawnorfocus` waterfox | `config.h:164` → `browsercmd[]={"waterfox","Waterfox",NULL}` `config.h:128` |
-| `Mod+a` | `toggleswallow` (swallow focused into next client) | `config.h:207` |
-| `Mod+Shift+A` | `toggleautoswallow` (auto-swallow on/off; `enableautoswallow=1` default `config.h:22`) | `config.h:208` |
+| `Mod+a` | (freed — no binding) | swallow runs via `enableautoswallow=1` (`config.h:22`); toggle handlers + binds removed |
 | `Mod+Shift+G` | `togglegaps` | `config.h:209` |
 | `Super+0` | view all tags (`~0`) | `config.h:215` |
 | `Super+s` / `Super+Shift+S` | area / full screenshot | `config.h:254-255` |
@@ -117,7 +116,7 @@ Window rules (grepped from `config.h:46-53`):
 | `wmenu-center` | floating, opacity `0.85f` | `config.h:48` |
 | `waterfox` | tag `1 << 8` = **tag 9**, opacity 1.0 | `config.h:49` |
 
-NOTE: bstack (`Super+u/U`), swallow (`Mod+a/Shift+A`), and gaps (`Mod+Shift+G`)
+NOTE: bstack (`Super+u/U`), swallow (now unbound — autoswallow only), and gaps (`Mod+Shift+G`)
 exist ONLY in `builds/dwl-user/config.h`. They are ABSENT from the `config.h`
 in `builds/dwl` (the dotfiles symlink target) and from `.config/dwl/config.h` —
 which is why `docs/KEYBINDS.md` (both the `dwl-user` and `dotfiles` copies)
@@ -177,7 +176,7 @@ move dwlb to "Not recommended here" or delete.
 
 **Addendum (doc gap, not in the original 2):** both `docs/KEYBINDS.md` copies
 (`builds/dwl-user/docs/KEYBINDS.md`, `dotfiles/docs/KEYBINDS.md`) omit the
-bstack (`Super+u/U`), swallow (`Mod+a`/`Mod+Shift+A`), and gaps (`Mod+Shift+G`)
+bstack (`Super+u/U`), swallow (unbound — autoswallow only), and gaps (`Mod+Shift+G`)
 binds present in the canonical `config.h`. The executor should trust
 `builds/dwl-user/config.h`, not the KEYBINDS docs, for these three.
 
@@ -207,7 +206,7 @@ tracks 0.8-dev against wlroots 0.19.
 - Canonical: <https://codeberg.org/dwl/dwl-patches/src/branch/main/patches/swallow>
 - Nikita's forks: <https://codeberg.org/nikitaivanov/dwl> (swallow branch), <https://codeberg.org/nikitaivanov/dwl-patches>
 - GitHub: <https://github.com/Evgaizen> — `dotfiles` repo exists but is web-dev focused (Lua), **no dwl config**
-- Key config: `isterm`, `noswallow` Rule fields, `enableautoswallow` (on by default), `Mod+a` toggle swallow, `Mod+Shift+a` toggle auto-swallow; uses `/proc/<pid>/stat` parent walk
+- Key config: `isterm`, `noswallow` Rule fields, `enableautoswallow` (on by default) — **toggle binds removed, `Super+a` freed** (no key); uses `/proc/<pid>/stat` parent walk
 
 **gaps** — peesock `<kcormn@gmail.com>`, co-authors sewn `<sewn@disroot.org>` + serenevoid `<ajuph9224@gmail.com>`
 - Canonical: <https://codeberg.org/dwl/dwl-patches/src/branch/main/patches/gaps>
