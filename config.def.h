@@ -65,7 +65,6 @@ static const Rule rules[] = {
   { NULL, "ranger", 0, 0, 1.0f, 0, 0, -1, "" },
   { NULL, "lf", 0, 0, 1.0f, 0, 0, -1, "" },
   { NULL, "yazi", 0, 0, 1.0f, 0, 0, -1, "" },
-  { NULL, "zathura", 0, 0, 1.0f, 0, 0, -1, "󰈙" },
   { NULL, "newsboat", 0, 0, 1.0f, 0, 0, -1, "󰭹" },
   { NULL, "lazygit", 0, 0, 1.0f, 0, 0, -1, "" },
   { NULL, "git", 0, 0, 1.0f, 0, 0, -1, "" },
@@ -135,6 +134,8 @@ static const Rule rules[] = {
   { "pavucontrol", NULL, 0, 0, 1.0f, 0, 0, -1, "" },
   { "gamescope", NULL, 0, 0, 1.0f, 0, 0, -1, "" },
   { "wlock", NULL, 0, 0, 1.0f, 0, 0, -1, "" },
+  { "zathura", NULL, 0, 0, 1.0f, 0, 0, -1, "󰈙" },
+  { "mpv", NULL, 0, 0, 1.0f, 0, 0, -1, "󰗋" },
   { NULL, "procs", 0, 0, 1.0f, 0, 0, -1, "" },
   { NULL, "btm", 0, 0, 1.0f, 0, 0, -1, "" },
   { NULL, "bottom", 0, 0, 1.0f, 0, 0, -1, "" },
@@ -159,7 +160,6 @@ static const Rule rules[] = {
   { NULL, "dog", 0, 0, 1.0f, 0, 0, -1, "" },
   { NULL, "speedtest-cli", 0, 0, 1.0f, 0, 0, -1, "" },
   { NULL, "tailscale", 0, 0, 1.0f, 0, 0, -1, "" },
-  { NULL, "mpv", 0, 0, 1.0f, 0, 0, -1, "󰗋" },
   { NULL, "yt-dlp", 0, 0, 1.0f, 0, 0, -1, "󰗋" },
   { NULL, "w3m", 0, 0, 1.0f, 0, 0, -1, "󰩟" },
   { NULL, "dive", 0, 0, 1.0f, 0, 0, -1, "" },
@@ -191,8 +191,6 @@ static const Rule rules[] = {
   { NULL, "dotenv", 0, 0, 1.0f, 0, 0, -1, "󰺩" },
   { NULL, "env", 0, 0, 1.0f, 0, 0, -1, "󰺩" },
 };
-
-
 
 /* layouts: tile, floating, monocle */
 static const Layout layouts[] = {
