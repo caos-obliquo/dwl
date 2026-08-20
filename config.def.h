@@ -11,7 +11,7 @@ static int gaps = 0; /* 1 means gaps between windows are added */
 static const unsigned int gappx = 6; /* gap pixel between windows */
 static const unsigned int borderpx = 0; /* window border width */
 static const unsigned int systrayspacing = 2; /* systray spacing */
-static const int showsystray = 1; /* 0 means no systray */
+static const int showsystray = 0; /* 0 means no systray */
 
 static const int showbar = 1; /* 0 means no bar */
 static const int topbar = 1; /* 0 means bottom bar */
