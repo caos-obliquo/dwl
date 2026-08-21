@@ -75,6 +75,7 @@ Source of truth: `config.h`. Layout: **ABNT2 (Brazilian)**, `MODKEY` = Super.
 | `XF86MonBrightnessDown/Up` | `brightnessctl -5%` / `+5%` |
 | `XF86AudioMute` | `wpctl set-mute` toggle |
 | `XF86AudioLowerVolume/RaiseVolume` | `wpctl` 5%- / 5%+ |
+| `F6` / `F7` / `F8` | `wpctl set-mute` toggle / `wpctl` 5%- / `wpctl` 5%+ |
 
 ## Screenshots
 

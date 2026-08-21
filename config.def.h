@@ -6,26 +6,190 @@
 /* appearance */
 static const int sloppyfocus = 1; /* focus follows mouse */
 static const int bypass_surface_visibility = 0;
+static const int smartgaps = 0; /* 1 means no outer gap when there is only one window */
+static int gaps = 0; /* 1 means gaps between windows are added */
+static const unsigned int gappx = 6; /* gap pixel between windows */
 static const unsigned int borderpx = 0; /* window border width */
+static const unsigned int systrayspacing = 2; /* systray spacing */
+static const int showsystray = 0; /* 0 means no systray */
 
-/* Dracula theme */
+static const int showbar = 1; /* 0 means no bar */
+static const int topbar = 1; /* 0 means bottom bar */
+
+/* Dracula theme — bar colors: fg, bg, border (uint32_t ARGB, alpha baked in) */
 static const float rootcolor[] = COLOR (0x222222ff);
-static const float bordercolor[] = COLOR (0x444444ff);
-static const float focuscolor[] = COLOR (0xbd93f9ff); /* purple */
-static const float urgentcolor[] = COLOR (0xff0000ff);
-
 static const float fullscreen_bg[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+static int enableautoswallow = 1; /* enables autoswallowing newly spawned clients */
+static float swallowborder = 1.0f; /* add this multiplied by borderpx to border when a client is swallowed */
 static const float default_opacity = 1.0f;
+static const char *fonts[] = { "JetBrainsMono Nerd Font:size=16" };
+static uint32_t colors[][3] = {
+  /*               fg          bg          border    */
+  [SchemeNorm] = { 0xeeeeeeff, 0x222222ee, 0x444444ff }, /* bg 93% alpha */
+  [SchemeSel]  = { 0x1e1e2eff, 0xbd93f9dd, 0xbd93f9dd }, /* Dracula purple 87% alpha */
+  [SchemeUrg]  = { 0xff0000ff, 0xff0000cc, 0xff0000ff },
+};
 
-#define TAGCOUNT (9)
+/* tagging */
+static char *tags[] = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
 
 static int log_level = WLR_ERROR;
 
-/* window rules - gimp floating, waterfox on tag 9 */
+/* appicons - tag bar icons; set to 0 to use defaults */
+static char outer_separator_beg = '[';
+static char outer_separator_end = ']';
+static char inner_separator = ' ';
+static unsigned truncate_icons_after = 2;
+static char truncate_symbol[] = "...";
+
+/* window rules: appid, title, tags, isfloating, opacity, isterm, noswallow, monitor, appicon */
 static const Rule rules[] = {
-  { "wmenu-center", NULL, 0, 1, 0.85f, -1 },
-  { "Gimp_EXAMPLE", NULL, 0, 1, 1.0f, -1 },
-  { "waterfox_EXAMPLE", NULL, 1 << 8, 0, 1.0f, -1 },
+  { NULL, NULL, 0, 0, 1.0f, 0, 0, -1, "󱂚" }, /* generic fallback icon for unmatched apps */
+  { "foot", NULL, 0, 0, 1.0f, 1, 1, -1, "󰆍" },
+  { "wmenu-center", NULL, 0, 1, 0.85f, 0, 0, -1, NULL },
+  { "waterfox", NULL, 0, 0, 1.0f, 0, 0, -1, "󰈹" },
+  { "chromium", NULL, 0, 0, 1.0f, 0, 0, -1, "󰊯" },
+  { "steam", NULL, 0, 0, 1.0f, 0, 0, -1, "" },
+  { "youtui", NULL, 0, 0, 1.0f, 0, 0, -1, "󰑈" },
+  { NULL, "pipemixer", 0, 0, 1.0f, 0, 0, -1, "󱄠" },
+  { NULL, "bluetoothctl", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "nvim", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "vim", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "hx", 0, 0, 1.0f, 0, 0, -1, "󰔤" },
+  { NULL, "emacs", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "nano", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "htop", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "btop", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "top", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "glances", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "ranger", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "lf", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "yazi", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "newsboat", 0, 0, 1.0f, 0, 0, -1, "󰭹" },
+  { NULL, "lazygit", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "git", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "tig", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "gitui", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "python", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "python3", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "node", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "npm", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "yarn", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "deno", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "go", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "rustc", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "cargo", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "rustup", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "gcc", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "g++", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "clang", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "julia", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "R", 0, 0, 1.0f, 0, 0, -1, "ﳒ" },
+  { NULL, "ruby", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "php", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "perl", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "java", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "csharp", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "swift", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "lua", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "kotlin", 0, 0, 1.0f, 0, 0, -1, "󰬟" },
+  { NULL, "sqlite", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "psql", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "mysql", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "redis", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "docker", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "kubectl", 0, 0, 1.0f, 0, 0, -1, "󱃾" },
+  { NULL, "k9s", 0, 0, 1.0f, 0, 0, -1, "󱃾" },
+  { NULL, "helm", 0, 0, 1.0f, 0, 0, -1, "󱃾" },
+  { NULL, "pacman", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "paru", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "yay", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "apt", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "nala", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "dnf", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "yum", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "systemctl", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "gdb", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "valgrind", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "curl", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "wget", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "rsync", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "ping", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "ssh", 0, 0, 1.0f, 0, 0, -1, "󰣀" },
+  { NULL, "scp", 0, 0, 1.0f, 0, 0, -1, "󰣀" },
+  { NULL, "tmux", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "make", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "cmake", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "gh", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "sudo", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "ccze", 0, 0, 1.0f, 0, 0, -1, "󰆍" },
+  { NULL, "pass", 0, 0, 1.0f, 0, 0, -1, "󰟃" },
+  { NULL, "raw-cli", 0, 0, 1.0f, 0, 0, -1, "󰺩" },
+  { NULL, "wclipmenu", 0, 0, 1.0f, 0, 0, -1, "󰆍" },
+
+  { "firefox", NULL, 0, 0, 1.0f, 0, 0, -1, "" },
+  { "imv", NULL, 0, 0, 1.0f, 0, 0, -1, "󰑿" },
+  { "thunar", NULL, 0, 0, 1.0f, 0, 0, -1, "" },
+  { "file-roller", NULL, 0, 0, 1.0f, 0, 0, -1, "󰹬" },
+  { "pavucontrol", NULL, 0, 0, 1.0f, 0, 0, -1, "" },
+  { "gamescope", NULL, 0, 0, 1.0f, 0, 0, -1, "" },
+  { "wlock", NULL, 0, 0, 1.0f, 0, 0, -1, "" },
+  { "zathura", NULL, 0, 0, 1.0f, 0, 0, -1, "󰈙" },
+  { "mpv", NULL, 0, 0, 1.0f, 0, 0, -1, "󰗋" },
+  { NULL, "procs", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "btm", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "bottom", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "fastfetch", 0, 0, 1.0f, 0, 0, -1, "󰲳" },
+  { NULL, "bat", 0, 0, 1.0f, 0, 0, -1, "󰭟" },
+  { NULL, "eza", 0, 0, 1.0f, 0, 0, -1, "󰈹" },
+  { NULL, "fd", 0, 0, 1.0f, 0, 0, -1, "󰐤" },
+  { NULL, "rg", 0, 0, 1.0f, 0, 0, -1, "󰐤" },
+  { NULL, "fzf", 0, 0, 1.0f, 0, 0, -1, "󰒄" },
+  { NULL, "tree", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "atuin", 0, 0, 1.0f, 0, 0, -1, "󰾯" },
+  { NULL, "zoxide", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "tldr", 0, 0, 1.0f, 0, 0, -1, "󰔤" },
+  { NULL, "nmap", 0, 0, 1.0f, 0, 0, -1, "󰏂" },
+  { NULL, "mtr", 0, 0, 1.0f, 0, 0, -1, "󰏂" },
+  { NULL, "ncat", 0, 0, 1.0f, 0, 0, -1, "󰭟" },
+  { NULL, "nc", 0, 0, 1.0f, 0, 0, -1, "󰭟" },
+  { NULL, "netcat", 0, 0, 1.0f, 0, 0, -1, "󰭟" },
+  { NULL, "nethogs", 0, 0, 1.0f, 0, 0, -1, "󰭟" },
+  { NULL, "arp-scan", 0, 0, 1.0f, 0, 0, -1, "󰏂" },
+  { NULL, "whois", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "dog", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "speedtest-cli", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "tailscale", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "yt-dlp", 0, 0, 1.0f, 0, 0, -1, "󰗋" },
+  { NULL, "w3m", 0, 0, 1.0f, 0, 0, -1, "󰩟" },
+  { NULL, "dive", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "terraform", 0, 0, 1.0f, 0, 0, -1, "ﲽ" },
+  { NULL, "magick", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "convert", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "brightnessctl", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "pamixer", 0, 0, 1.0f, 0, 0, -1, "󱄠" },
+  { NULL, "cppcheck", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "luacheck", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "luarocks", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "meson", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "ninja", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "kapc", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "kapd", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "kapg", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "pi", 0, 0, 1.0f, 0, 0, -1, "π" },
+  { NULL, "opencode", 0, 0, 1.0f, 0, 0, -1, "󰺩" },
+  { NULL, "tiny-agents", 0, 0, 1.0f, 0, 0, -1, "󰺩" },
+  { NULL, "litellm", 0, 0, 1.0f, 0, 0, -1, "󰺩" },
+  { NULL, "hf", 0, 0, 1.0f, 0, 0, -1, "󰺩" },
+  { NULL, "huggingface-cli", 0, 0, 1.0f, 0, 0, -1, "󰺩" },
+  { NULL, "uv", 0, 0, 1.0f, 0, 0, -1, "󰺩" },
+  { NULL, "uvx", 0, 0, 1.0f, 0, 0, -1, "󰺩" },
+  { NULL, "rtk", 0, 0, 1.0f, 0, 0, -1, "󰺩" },
+  { NULL, "me3", 0, 0, 1.0f, 0, 0, -1, "󰺩" },
+  { NULL, "lite", 0, 0, 1.0f, 0, 0, -1, "󰺩" },
+  { NULL, "distro", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "dotenv", 0, 0, 1.0f, 0, 0, -1, "󰺩" },
+  { NULL, "env", 0, 0, 1.0f, 0, 0, -1, "󰺩" },
 };
 
 /* layouts: tile, floating, monocle */
@@ -33,6 +197,8 @@ static const Layout layouts[] = {
   { "[]=", tile },
   { "><>", NULL },
   { "[M]", monocle },
+  { "TTT", bstack },
+  { "===", bstackhoriz },
 };
 
 /* monitor defaults - works with multiple monitors */
@@ -71,6 +237,8 @@ static const double accel_speed = 0.0;
 static const enum libinput_config_tap_button_map button_map
     = LIBINPUT_CONFIG_TAP_MAP_LRM;
 
+static const int cursor_timeout = 5; /* hide cursor after N seconds idle */
+
 #define MODKEY WLR_MODIFIER_LOGO /* Super/Windows key */
 
 #define TAGKEYS(KEY, SKEY, TAG)                                               \
@@ -96,6 +264,7 @@ static const char *const autostart[]
 /* commands */
 static const char *termcmd[] = { "foot", NULL };
 static const char *menucmd[] = { "wmenu-run", "-t", NULL };
+static const char *dmenucmd[] = { "wmenu", NULL };
 static const char *browsercmd[] = { "waterfox", "Waterfox", NULL };
 static const char *dismisscmd[] = { "makoctl", "dismiss", NULL };
 static const char *passcmd[] = { "passmenu", NULL }; /* requires passmenu (pass) */
@@ -133,6 +302,7 @@ static const Key keys[] = {
   /* launchers */
   { MODKEY, XKB_KEY_d, spawn, { .v = menucmd } },
   { MODKEY, XKB_KEY_b, spawnorfocus, { .v = browsercmd } },
+  { MODKEY | WLR_MODIFIER_SHIFT, XKB_KEY_X, togglebar, { 0 } }, /* toggle bar (Shift+X: plain Cmd+X is Mac cut via PiKVM) */
   { MODKEY | WLR_MODIFIER_SHIFT, XKB_KEY_D, spawn, { .v = dismisscmd } },
   { MODKEY, XKB_KEY_g, spawn, { .v = passcmd } },
   { MODKEY | WLR_MODIFIER_SHIFT, XKB_KEY_Return, spawn, { .v = termcmd } },
@@ -166,12 +336,15 @@ static const Key keys[] = {
   { MODKEY, XKB_KEY_t, setlayout, { .v = &layouts[0] } }, /* tile */
   { MODKEY, XKB_KEY_f, setlayout, { .v = &layouts[1] } }, /* float */
   { MODKEY, XKB_KEY_m, setlayout, { .v = &layouts[2] } }, /* monocle */
+  { MODKEY, XKB_KEY_u, setlayout, { .v = &layouts[3] } }, /* bottomstack */
+  { MODKEY | WLR_MODIFIER_SHIFT, XKB_KEY_U, setlayout, { .v = &layouts[4] } }, /* bottomstack horizontal */
   { MODKEY, XKB_KEY_space, setlayout, { 0 } },            /* toggle layout */
   { MODKEY | WLR_MODIFIER_SHIFT,
     XKB_KEY_space,
     togglefloating,
     { 0 } },                                      /* toggle float */
   { MODKEY, XKB_KEY_e, togglefullscreen, { 0 } }, /* fullscreen */
+{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_G, togglegaps, { 0 } }, /* toggle gaps */
 
   /* window kill */
   { MODKEY, XKB_KEY_q, killclient, { 0 } },
@@ -205,7 +378,10 @@ static const Key keys[] = {
   { 0, XKB_KEY_XF86MonBrightnessDown, spawn, { .v = brightnessdown } },
   { 0, XKB_KEY_XF86MonBrightnessUp, spawn, { .v = brightnessup } },
 
-  /* volume - FN+F6/F7/F8 (media keys only, no plain F-keys) */
+  /* volume - F6 mute / F7 down / F8 up + media keys */
+  { 0, XKB_KEY_F6, spawn, { .v = volumemute } },
+  { 0, XKB_KEY_F7, spawn, { .v = volumedown } },
+  { 0, XKB_KEY_F8, spawn, { .v = volumeup } },
   { 0, XKB_KEY_XF86AudioMute, spawn, { .v = volumemute } },
   { 0, XKB_KEY_XF86AudioLowerVolume, spawn, { .v = volumedown } },
   { 0, XKB_KEY_XF86AudioRaiseVolume, spawn, { .v = volumeup } },
@@ -255,7 +431,17 @@ static const Key keys[] = {
 };
 
 static const Button buttons[] = {
-  { MODKEY, BTN_LEFT, moveresize, { .ui = CurMove } },
-  { MODKEY, BTN_MIDDLE, togglefloating, { 0 } },
-  { MODKEY, BTN_RIGHT, moveresize, { .ui = CurResize } },
+  { ClkLtSymbol, 0, BTN_LEFT, setlayout, { .v = &layouts[0] } },
+  { ClkLtSymbol, 0, BTN_RIGHT, setlayout, { .v = &layouts[2] } },
+  { ClkTitle, 0, BTN_MIDDLE, zoom, { 0 } },
+  { ClkStatus, 0, BTN_MIDDLE, spawn, { .v = termcmd } },
+  { ClkClient, MODKEY, BTN_LEFT, moveresize, { .ui = CurMove } },
+  { ClkClient, MODKEY, BTN_MIDDLE, togglefloating, { 0 } },
+  { ClkClient, MODKEY, BTN_RIGHT, moveresize, { .ui = CurResize } },
+  { ClkTagBar, 0, BTN_LEFT, view, { 0 } },
+  { ClkTagBar, 0, BTN_RIGHT, toggleview, { 0 } },
+  { ClkTagBar, MODKEY, BTN_LEFT, tag, { 0 } },
+  { ClkTagBar, MODKEY, BTN_RIGHT, toggletag, { 0 } },
+  { ClkTray, 0, BTN_LEFT, trayactivate, { 0 } },
+  { ClkTray, 0, BTN_RIGHT, traymenu, { 0 } },
 };
