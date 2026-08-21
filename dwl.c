@@ -377,7 +377,6 @@ static void fullscreennotify(struct wl_listener *listener, void *data);
 static void gpureset(struct wl_listener *listener, void *data);
 static void handlecursoractivity(void);
 static int hidecursor(void *data);
-static void cursorimage_destroy(struct wl_listener *listener, void *data);
 static void handlesig(int signo);
 static void incnmaster(const Arg *arg);
 static void inputdevice(struct wl_listener *listener, void *data);
@@ -435,8 +434,6 @@ static void togglebar(const Arg *arg);
 static void togglefloating(const Arg *arg);
 static void togglefullscreen(const Arg *arg);
 static void togglegaps(const Arg *arg);
-static void toggleswallow(const Arg *arg);
-static void toggleautoswallow(const Arg *arg);
 static void toggletag(const Arg *arg);
 static void toggleview(const Arg *arg);
 static void trayactivate(const Arg *arg);
@@ -517,7 +514,6 @@ static struct {
 	int hotspot_x;
 	int hotspot_y;
 } last_cursor;
-static struct wl_listener cursor_destroy;
 
 static struct wlr_scene_rect *root_bg;
 static struct wlr_session_lock_manager_v1 *session_lock_mgr;
@@ -654,7 +650,7 @@ applyrules(Client *c)
 
 	c->isfloating |= client_is_float_type(c);
 	if (enableautoswallow && !c->noswallow && !c->isfloating &&
-			!client_is_x11(c) && !c->surface.xdg->initial_commit) {
+			!c->surface.xdg->initial_commit) {
 		Client *p = termforwin(c);
 		if (p)
 			swallow(c, p);
@@ -2046,8 +2042,8 @@ drawbar(Monitor *m)
 	c = focustop(m);
 	for (i = 0; i < LENGTH(tags); i++) {
 		w = TEXTW(m, m->tag_icons[i]);
-		/* all tags are pills: purple bg, dark fg (Dracula SchemeSel) regardless of tagset/occupancy */
-		drwl_setscheme(m->drw, colors[SchemeSel]);
+		/* per-tag scheme: active tag is a purple pill (SchemeSel), inactive tags use SchemeNorm */
+		drwl_setscheme(m->drw, colors[m->tagset[m->seltags] & 1 << i ? SchemeSel : SchemeNorm]);
 		drwl_text(m->drw, x, 0, w, m->b.height, m->lrpad / 2, m->tag_icons[i], urg & 1 << i);
 		if (occ & 1 << i && icons_per_tag[i] == 0)
 			drwl_rect(m->drw, x + boxs, boxs, boxw, boxw,
@@ -2396,15 +2392,6 @@ hidecursor(void *data)
 	wlr_cursor_unset_image(cursor);
 	cursor_hidden = true;
 	return 1;
-}
-
-void
-cursorimage_destroy(struct wl_listener *listener, void *data)
-{
-	/* the cached cursor surface is gone: drop the reference so a later
-	 * un-hide cannot restore a dangling pointer */
-	if (last_cursor.surface == data)
-		last_cursor.surface = NULL;
 }
 
 void
@@ -2934,11 +2921,11 @@ apply_or_test:
 }
 
 void
-outputmgrtest(struct wl_listener *listener, void *data)
-{
-	struct wlr_output_configuration_v1 *config = data;
-	outputmgrapplyortest(config, 1);
-}
+ outputmgrtest(struct wl_listener *listener, void *data)
+ {
+ 	struct wlr_output_configuration_v1 *config = data;
+ 	outputmgrapplyortest(config, 1);
+ }
 
 pid_t
 parentpid(pid_t pid)
@@ -2949,9 +2936,7 @@ parentpid(pid_t pid)
 	snprintf(buf, sizeof(buf) - 1, "/proc/%u/stat", (unsigned)pid);
 	if (!(f = fopen(buf, "r")))
 		return 0;
-	/* comm may contain spaces/parens; parse the name up to the closing ')' */
-	if (fscanf(f, "%*u %*[^)]) %*c %*c %u", &v) != 1)
-		v = 0;
+	fscanf(f, "%*u %*s %*c %u", &v);
 	fclose(f);
 	return (pid_t)v;
 }
@@ -3175,13 +3160,10 @@ setcursor(struct wl_listener *listener, void *data)
 	 * hardware cursor on the output that it's currently on and continue to
 	 * do so as the cursor moves between outputs. */
 	if (event->seat_client == seat->pointer_state.focused_client) {
-		if (cursor_destroy.link.prev)
-			wl_list_remove(&cursor_destroy.link);
 		last_cursor.shape = 0;
 		last_cursor.surface = event->surface;
 		last_cursor.hotspot_x = event->hotspot_x;
 		last_cursor.hotspot_y = event->hotspot_y;
-		wl_signal_add(&event->surface->events.destroy, &cursor_destroy);
 
 		if (!cursor_hidden)
 			wlr_cursor_set_surface(cursor, event->surface,
@@ -3199,8 +3181,6 @@ setcursorshape(struct wl_listener *listener, void *data)
 	 * actually has pointer focus first. If so, we can tell the cursor to
 	 * use the provided cursor shape. */
 	if (event->seat_client == seat->pointer_state.focused_client) {
-		if (cursor_destroy.link.prev)
-			wl_list_remove(&cursor_destroy.link);
 		last_cursor.shape = event->shape;
 		last_cursor.surface = NULL;
 
@@ -3524,7 +3504,6 @@ setup(void)
 
 	hide_source = wl_event_loop_add_timer(wl_display_get_event_loop(dpy),
 			hidecursor, cursor);
-	cursor_destroy.notify = cursorimage_destroy;
 
 	/*
 	 * Configures a seat, which is a single "seat" at which a user sits and
@@ -3716,12 +3695,12 @@ tag(const Arg *arg)
 }
 
 void
-tagmon(const Arg *arg)
-{
-	Client *sel = focustop(selmon);
-	if (sel)
-		setmon(sel, dirtomon(arg->i), 0);
-}
+ tagmon(const Arg *arg)
+ {
+ 	Client *sel = focustop(selmon);
+ 	if (sel)
+ 		setmon(sel, dirtomon(arg->i), 0);
+ }
 
 Client *
 termforwin(Client *c)
@@ -3799,88 +3778,6 @@ tile(Monitor *m)
 }
 
 void
-bstack(Monitor *m)
-{
-	int w, h, mh, mx, tx, ty, tw;
-	int i, n = 0;
-	Client *c;
-
-	wl_list_for_each(c, &clients, link)
-		if (VISIBLEON(c, m) && !c->isfloating)
-			n++;
-	if (n == 0)
-		return;
-
-	if (n > m->nmaster) {
-		mh = (int)round(m->nmaster ? m->mfact * m->w.height : 0);
-		tw = m->w.width / (n - m->nmaster);
-		ty = m->w.y + mh;
-	} else {
-		mh = m->w.height;
-		tw = m->w.width;
-		ty = m->w.y;
-	}
-
-	i = mx = 0;
-	tx = m->w.x;
-	wl_list_for_each(c, &clients, link) {
-		if (!VISIBLEON(c, m) || c->isfloating)
-			continue;
-		if (i < m->nmaster) {
-			w = (m->w.width - mx) / (MIN(n, m->nmaster) - i);
-			resize(c, (struct wlr_box) { .x = m->w.x + mx, .y = m->w.y, .width = w, .height = mh }, 0);
-			mx += c->geom.width;
-		} else {
-			h = m->w.height - mh;
-			resize(c, (struct wlr_box) { .x = tx, .y = ty, .width = tw, .height = h }, 0);
-			if (tw != m->w.width)
-				tx += c->geom.width;
-		}
-		i++;
-	}
-}
-
-void
-bstackhoriz(Monitor *m)
-{
-	int w, mh, mx, tx, ty, th;
-	int i, n = 0;
-	Client *c;
-
-	wl_list_for_each(c, &clients, link)
-		if (VISIBLEON(c, m) && !c->isfloating)
-			n++;
-	if (n == 0)
-		return;
-
-	if (n > m->nmaster) {
-		mh = (int)round(m->nmaster ? m->mfact * m->w.height : 0);
-		th = (m->w.height - mh) / (n - m->nmaster);
-		ty = m->w.y + mh;
-	} else {
-		th = mh = m->w.height;
-		ty = m->w.y;
-	}
-
-	i = mx = 0;
-	tx = m->w.x;
-	wl_list_for_each(c, &clients, link) {
-		if (!VISIBLEON(c, m) || c->isfloating)
-			continue;
-		if (i < m->nmaster) {
-			w = (m->w.width - mx) / (MIN(n, m->nmaster) - i);
-			resize(c, (struct wlr_box) { .x = m->w.x + mx, .y = m->w.y, .width = w, .height = mh }, 0);
-			mx += c->geom.width;
-		} else {
-			resize(c, (struct wlr_box) { .x = tx, .y = ty, .width = m->w.width, .height = th }, 0);
-			if (th != m->w.height)
-				ty += c->geom.height;
-		}
-		i++;
-	}
-}
-
-void
 togglebar(const Arg *arg)
 {
 	wlr_scene_node_set_enabled(&selmon->scene_buffer->node,
@@ -3911,32 +3808,6 @@ togglegaps(const Arg *arg)
 {
 	selmon->gaps = !selmon->gaps;
 	arrange(selmon);
-}
-
-void
-toggleswallow(const Arg *arg)
-{
-	Client *c, *sel = focustop(selmon);
-	if (!sel)
-		return;
-
-	if (sel->swallowing) {
-		swallow(sel, NULL);
-	} else {
-		wl_list_for_each(c, &sel->flink, flink) {
-			if (&c->flink == &fstack)
-				continue; /* wrap past the sentinel node */
-			if (VISIBLEON(c, selmon))
-				break; /* found it */
-		}
-		swallow(sel, c);
-	}
-}
-
-void
-toggleautoswallow(const Arg *arg)
-{
-	enableautoswallow = !enableautoswallow;
 }
 
 void
@@ -4184,6 +4055,19 @@ void
 updatetitle(struct wl_listener *listener, void *data)
 {
 	Client *c = wl_container_of(listener, c, set_title);
+	const char *appid = client_get_appid(c);
+	const char *title = client_get_title(c);
+	const Rule *r;
+
+	/* re-evaluate the appicon when the title changes so title-matched
+	 * appicon rules fire for apps run inside tmux (set-titles changes the
+	 * window title, not the app id); no break = last matching rule wins,
+	 * matching applyrules()'s semantics; only c->appicon is touched */
+	for (r = rules; r < END(rules); r++)
+		if ((!r->title || strstr(title, r->title))
+				&& (!r->id || strstr(appid, r->id)))
+			c->appicon = (char *)r->appicon;
+
 	if (c == focustop(c->mon))
 		drawbars();
 }
@@ -4471,4 +4355,86 @@ main(int argc, char *argv[])
 
 usage:
 	die("Usage: %s [-v] [-d] [-s startup command]", argv[0]);
+}
+
+void
+bstack(Monitor *m)
+{
+	int w, h, mh, mx, tx, ty, tw;
+	int i, n = 0;
+	Client *c;
+
+	wl_list_for_each(c, &clients, link)
+		if (VISIBLEON(c, m) && !c->isfloating)
+			n++;
+	if (n == 0)
+		return;
+
+	if (n > m->nmaster) {
+		mh = (int)round(m->nmaster ? m->mfact * m->w.height : 0);
+		tw = m->w.width / (n - m->nmaster);
+		ty = m->w.y + mh;
+	} else {
+		mh = m->w.height;
+		tw = m->w.width;
+		ty = m->w.y;
+	}
+
+	i = mx = 0;
+	tx = m->w.x;
+	wl_list_for_each(c, &clients, link) {
+		if (!VISIBLEON(c, m) || c->isfloating)
+			continue;
+		if (i < m->nmaster) {
+			w = (m->w.width - mx) / (MIN(n, m->nmaster) - i);
+			resize(c, (struct wlr_box) { .x = m->w.x + mx, .y = m->w.y, .width = w, .height = mh }, 0);
+			mx += c->geom.width;
+		} else {
+			h = m->w.height - mh;
+			resize(c, (struct wlr_box) { .x = tx, .y = ty, .width = tw, .height = h }, 0);
+			if (tw != m->w.width)
+				tx += c->geom.width;
+		}
+		i++;
+	}
+}
+
+void
+bstackhoriz(Monitor *m)
+{
+	int w, mh, mx, tx, ty, th;
+	int i, n = 0;
+	Client *c;
+
+	wl_list_for_each(c, &clients, link)
+		if (VISIBLEON(c, m) && !c->isfloating)
+			n++;
+	if (n == 0)
+		return;
+
+	if (n > m->nmaster) {
+		mh = (int)round(m->nmaster ? m->mfact * m->w.height : 0);
+		th = (m->w.height - mh) / (n - m->nmaster);
+		ty = m->w.y + mh;
+	} else {
+		th = mh = m->w.height;
+		ty = m->w.y;
+	}
+
+	i = mx = 0;
+	tx = m->w.x;
+	wl_list_for_each(c, &clients, link) {
+		if (!VISIBLEON(c, m) || c->isfloating)
+			continue;
+		if (i < m->nmaster) {
+			w = (m->w.width - mx) / (MIN(n, m->nmaster) - i);
+			resize(c, (struct wlr_box) { .x = m->w.x + mx, .y = m->w.y, .width = w, .height = mh }, 0);
+			mx += c->geom.width;
+		} else {
+			resize(c, (struct wlr_box) { .x = tx, .y = ty, .width = m->w.width, .height = th }, 0);
+			if (th != m->w.height)
+				ty += c->geom.height;
+		}
+		i++;
+	}
 }
