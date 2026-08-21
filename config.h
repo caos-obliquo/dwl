@@ -217,7 +217,7 @@ static const struct xkb_rule_names xkb_rules = {
   .model = "abnt2",
   .layout = "br",
   .variant = NULL,
-  .options = "caps:escape", /* keyboard-warrior: CapsLock is Escape */
+  .options = "caps:swapescape", /* Caps↔Esc full swap (both directions) */
 };
 
 /* trackpad */
@@ -283,9 +283,9 @@ static const char *volumedown[]
     = { "wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "5%-", NULL };
 static const char *volumeup[]
     = { "wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "5%+", NULL };
-static const char *playpause[] = { "playerctl", "play-pause", NULL };
-static const char *playnext[] = { "playerctl", "next", NULL };
-static const char *playprev[] = { "playerctl", "previous", NULL };
+static const char *audioplay[] = { "playerctl", "-p", "youtui", "play-pause", NULL };
+static const char *audionext[] = { "playerctl", "-p", "youtui", "next", NULL };
+static const char *audioprev[] = { "playerctl", "-p", "youtui", "previous", NULL };
 
 /* screenshots */
 static const char *screenshot_full[] = { "dwl-screenshot", "full", NULL };
@@ -388,10 +388,10 @@ static const Key keys[] = {
   { 0, XKB_KEY_XF86AudioLowerVolume, spawn, { .v = volumedown } },
   { 0, XKB_KEY_XF86AudioRaiseVolume, spawn, { .v = volumeup } },
 
-  /* media control - playerctl */
-  { 0, XKB_KEY_XF86AudioPlay, spawn, { .v = playpause } },
-  { 0, XKB_KEY_XF86AudioNext, spawn, { .v = playnext } },
-  { 0, XKB_KEY_XF86AudioPrev, spawn, { .v = playprev } },
+  /* media control - youtui */
+  { 0, XKB_KEY_XF86AudioPlay, spawn, { .v = audioplay } },
+  { 0, XKB_KEY_XF86AudioNext, spawn, { .v = audionext } },
+  { 0, XKB_KEY_XF86AudioPrev, spawn, { .v = audioprev } },
 
   /* screenshots */
   { MODKEY, XKB_KEY_s, spawn, { .v = screenshot_area } },
