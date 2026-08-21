@@ -217,7 +217,7 @@ static const struct xkb_rule_names xkb_rules = {
   .model = "abnt2",
   .layout = "br",
   .variant = NULL,
-  .options = "caps:swapescape", /* Caps↔Esc full swap (both directions) */
+  .options = NULL, /* caps2esc handled at input level via interception-caps2esc */
 };
 
 /* trackpad */
