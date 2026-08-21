@@ -47,8 +47,6 @@ static const Rule rules[] = {
   { NULL, NULL, 0, 0, 1.0f, 0, 0, -1, "󱂚" }, /* generic fallback icon for unmatched apps */
   { "foot", NULL, 0, 0, 1.0f, 1, 1, -1, "󰆍" },
   { "wmenu-center", NULL, 0, 1, 0.85f, 0, 0, -1, NULL },
-  { "waterfox", NULL, 0, 0, 1.0f, 0, 0, -1, "󰈹" },
-  { "chromium", NULL, 0, 0, 1.0f, 0, 0, -1, "󰊯" },
   { "steam", NULL, 0, 0, 1.0f, 0, 0, -1, "" },
   { "youtui", NULL, 0, 0, 1.0f, 0, 0, -1, "󰑈" },
   { NULL, "pipemixer", 0, 0, 1.0f, 0, 0, -1, "󱄠" },
@@ -120,14 +118,13 @@ static const Rule rules[] = {
   { NULL, "tmux", 0, 0, 1.0f, 0, 0, -1, "" },
   { NULL, "make", 0, 0, 1.0f, 0, 0, -1, "" },
   { NULL, "cmake", 0, 0, 1.0f, 0, 0, -1, "" },
-  { NULL, "gh", 0, 0, 1.0f, 0, 0, -1, "" },
+  { NULL, "gh", 0, 0, 1.0f, 0, 0, -1, "" },
   { NULL, "sudo", 0, 0, 1.0f, 0, 0, -1, "" },
   { NULL, "ccze", 0, 0, 1.0f, 0, 0, -1, "󰆍" },
   { NULL, "pass", 0, 0, 1.0f, 0, 0, -1, "󰟃" },
   { NULL, "raw-cli", 0, 0, 1.0f, 0, 0, -1, "󰺩" },
   { NULL, "wclipmenu", 0, 0, 1.0f, 0, 0, -1, "󰆍" },
 
-  { "firefox", NULL, 0, 0, 1.0f, 0, 0, -1, "" },
   { "imv", NULL, 0, 0, 1.0f, 0, 0, -1, "󰑿" },
   { "thunar", NULL, 0, 0, 1.0f, 0, 0, -1, "" },
   { "file-roller", NULL, 0, 0, 1.0f, 0, 0, -1, "󰹬" },
@@ -190,6 +187,11 @@ static const Rule rules[] = {
   { NULL, "distro", 0, 0, 1.0f, 0, 0, -1, "" },
   { NULL, "dotenv", 0, 0, 1.0f, 0, 0, -1, "󰺩" },
   { NULL, "env", 0, 0, 1.0f, 0, 0, -1, "󰺩" },
+
+  /* browsers last: id-match always wins over any page-title match */
+  { "waterfox", NULL, 0, 0, 1.0f, 0, 0, -1, "󰈹" },
+  { "chromium", NULL, 0, 0, 1.0f, 0, 0, -1, "󰊯" },
+  { "firefox", NULL, 0, 0, 1.0f, 0, 0, -1, "" },
 };
 
 /* layouts: tile, floating, monocle */
