@@ -1,6 +1,6 @@
 # dwl - dwm for Wayland
 
-> **caos-obliquo fork** — DraculaWL build (dwl + dwlb-geometry + wmenu-caos).
+> **caos-obliquo fork** — DraculaWL build (dwl + dwl-ipc bar_geometry + wmenu-caos).
 >
 > - Keybinds: [`docs/KEYBINDS.md`](docs/KEYBINDS.md)
 > - Patch index: [`docs/PATCHES.md`](docs/PATCHES.md)

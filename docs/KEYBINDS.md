@@ -9,7 +9,6 @@ Source of truth: `config.h`. Layout: **ABNT2 (Brazilian)**, `MODKEY` = Super.
 | `Super+d` | `wmenu-run` (app menu) |
 | `Super+b` | `spawnorfocus` waterfox — focus if running, else spawn |
 | `Super+g` | `passmenu` (password store; requires passmenu) |
-| `Super+Shift+D` | `makoctl dismiss` — dismiss notification |
 | `Super+Shift+Return` | `foot` terminal |
 | `Super+Shift+L` | `wlock` (screen lock) |
 | `Super+p` | `wclipmenu` (clipboard text picker) |
@@ -40,9 +39,11 @@ Source of truth: `config.h`. Layout: **ABNT2 (Brazilian)**, `MODKEY` = Super.
 | `Super+f` | float layout `><>` |
 | `Super+m` | monocle `[M]` |
 | `Super+Space` | toggle layout |
+| `Super+u` / `Super+Shift+U` | bstack `TTT` / bstackhoriz `===` (bottomstack patch) |
 | `Super+Shift+Space` | `togglefloating` — float only the focused window |
 | `Super+e` | `togglefullscreen` |
 | `Super+Tab` | view last tag |
+| `Super+Shift+G` | `togglegaps` (gaps patch) |
 
 ## Window kill
 
@@ -76,6 +77,7 @@ Source of truth: `config.h`. Layout: **ABNT2 (Brazilian)**, `MODKEY` = Super.
 | `XF86AudioMute` | `wpctl set-mute` toggle |
 | `XF86AudioLowerVolume/RaiseVolume` | `wpctl` 5%- / 5%+ |
 | `F6` / `F7` / `F8` | `wpctl set-mute` toggle / `wpctl` 5%- / `wpctl` 5%+ |
+| `XF86AudioPlay` / `XF86AudioNext` / `XF86AudioPrev` | `playerctl -p youtui` play-pause / next / previous |
 
 ## Screenshots
 
@@ -91,6 +93,7 @@ Source of truth: `config.h`. Layout: **ABNT2 (Brazilian)**, `MODKEY` = Super.
 | Key | Action |
 |---|---|
 | `Super+Shift+Q` | quit dwl |
+| `Super+Shift+X` | `togglebar` — show/hide bar |
 | `Ctrl+Alt+Backspace` (Terminate_Server) | quit dwl |
 | `Ctrl+Alt+F1..F12` | `chvt` — switch VT |
 
@@ -108,7 +111,7 @@ Source of truth: `config.h`. Layout: **ABNT2 (Brazilian)**, `MODKEY` = Super.
 |---|---|
 | `wmenu-center` | floating, opacity 0.85 |
 | Gimp (example) | floating, opacity 1.0 |
-| waterfox (example) | tag 9 |
+| waterfox (example) | no tag (`tags = 0`), opacity 1.0 |
 
 ## Layouts available
 
@@ -117,8 +120,11 @@ Source of truth: `config.h`. Layout: **ABNT2 (Brazilian)**, `MODKEY` = Super.
 | `[]=` | tile (default, `mfact 0.55`, `nmaster 1`) |
 | `><>` | floating |
 | `[M]` | monocle |
+| `TTT` | bstack (bottomstack) |
+| `===` | bstackhoriz (bottomstack horizontal) |
 
 ## Keyboard (layout)
 
-ABNT2 Brazilian. `CapsLock` acts as **Escape** (`xkb_rules.options =
-"caps:escape"`) — remap your muscle memory accordingly.
+ABNT2 Brazilian. `CapsLock` acts as **Escape** via interception-caps2esc at the
+input layer (`xkb_rules.options = NULL` in config.h) — remap your muscle memory
+accordingly.
