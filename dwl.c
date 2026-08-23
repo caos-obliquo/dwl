@@ -356,7 +356,7 @@ static void dwl_ipc_output_printstatus(Monitor *monitor);
 static void dwl_ipc_output_printstatus_to(DwlIpcOutput *ipc_output);
 static void dwl_ipc_output_release(struct wl_client *client,
 		struct wl_resource *resource);
-static void dwl_ipc_output_send_bar_geometry(Monitor *m, int tw, int traywidth, int title_x);
+static void dwl_ipc_output_send_bar_geometry(Monitor *m, int tw, int traywidth, int title_x, int has_title);
 static void dwl_ipc_output_set_client_tags(struct wl_client *client,
 		struct wl_resource *resource, uint32_t and_tags, uint32_t xor_tags);
 static void dwl_ipc_output_set_layout(struct wl_client *client,
@@ -1844,10 +1844,13 @@ dwl_ipc_output_printstatus_to(DwlIpcOutput *ipc_output)
 }
 
 static void
-dwl_ipc_output_send_bar_geometry(Monitor *m, int tw, int traywidth, int title_x)
+dwl_ipc_output_send_bar_geometry(Monitor *m, int tw, int traywidth, int title_x, int has_title)
 {
 	DwlIpcOutput *ipc_output;
-	int middle_width = m->b.width - (tw + traywidth + title_x);
+	/* No focused client = no title pill in the bar middle. Report an empty
+	 * middle section so overlay clients (wmenu) fall back to the dark
+	 * standalone theme instead of the purple pill theme. */
+	int middle_width = has_title ? m->b.width - (tw + traywidth + title_x) : 0;
 	uint32_t middle_x = (uint32_t)(title_x / m->wlr_output->scale);
 	uint32_t middle_width_logical = (uint32_t)((middle_width > 0 ? middle_width : 0) / m->wlr_output->scale);
 	uint32_t bar_height = m->b.real_height;
@@ -2062,7 +2065,7 @@ drawbar(Monitor *m)
 	x = drwl_text(m->drw, x, 0, w, m->b.height, m->lrpad / 2, m->ltsymbol, 0);
 
 	/* publish the middle title area (tags+layout symbol → status/tray) */
-	dwl_ipc_output_send_bar_geometry(m, m == selmon ? tw : 0, traywidth, x);
+	dwl_ipc_output_send_bar_geometry(m, m == selmon ? tw : 0, traywidth, x, c != NULL);
 
 	if ((w = m->b.width - (tw + x + traywidth)) > m->b.height) {
 		if (c) {
