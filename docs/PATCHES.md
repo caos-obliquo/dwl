@@ -1,8 +1,8 @@
 # Recommended dwl patches
 
 Curated from the official [dwl-patches](https://codeberg.org/dwl/dwl-patches)
-repository, matching this setup: `foot` terminal, `wmenu`/`wclipmenu`, `dwlb`
-bar (no-ipc), `wlock`, Dracula theme, XWayland enabled, trackpad.
+repository, matching this setup: `foot` terminal, `wmenu`/`wclipmenu`, sewn-in
+dwl bar (dwl-status.sh stdin pipe), `wlock`, Dracula theme, XWayland enabled, trackpad.
 
 Apply with: `patch -p1 < patches/<name>.patch` (from the repo root), then
 `make`.
@@ -40,14 +40,14 @@ Apply with: `patch -p1 < patches/<name>.patch` (from the repo root), then
 
 | Patch | Why |
 |---|---|
-| `ipc` | Enables the `dwl-ipc-unstable-v2` protocol that `dwlb` needs for full bar mode (tags, layout, titles, per-monitor). Your `dwlb-geometry` build already ships the protocol stubs. Combine with the `ipc` patch and drop `-no-ipc` from `start-dwl.sh`. |
+| `ipc` | Enables the `dwl-ipc-unstable-v2` protocol that `dwlb` needs for full bar mode (tags, layout, titles, per-monitor). This fork compiles the protocol in-tree (used by `wmenu-caos` for `bar_geometry`). Combine with the `ipc` patch and drop `-no-ipc` from `start-dwl.sh`. |
 | `hide_vacant_tags` | With the `ipc` patch: hides empty tags in the bar. |
 
 ## Not recommended here
 
 - `autostart` — you already use `dwl -s`; no need.
 - `systemd` — only if you want dwl itself as a systemd user service.
-- `borders`/`smartborders`/`bar-*` — `borderpx = 0` and external `dwlb`; not applicable.
+- `borders`/`smartborders`/`bar-*` — `borderpx = 0` and the bar is sewn-in; not applicable.
 - `simpleborders` — reported as aggravating the very freeze fixed above (issue #1203 thread); avoid.
 - `tearing`/`fullscreenadaptivesync`/`gamepad-bindings` — hardware/gaming specific; skip unless you game on this machine.
 - `touch-input`/`tablet-input`/`virtual-pointer` — no touch/tablet hardware present.
@@ -89,32 +89,32 @@ against THIS config, not against any doc that drifts from it.
 ### 2. Canonical config & keybinds
 
 Source of truth: `/home/caos/builds/dwl-user/config.h` (the file actually compiled by
-the canonical repo). `MODKEY` is Super — `config.h:102`:
+the canonical repo). `MODKEY` is Super — `config.h:244`:
 `#define MODKEY WLR_MODIFIER_LOGO /* Super/Windows key */`.
 
 Each bind grepped directly from `builds/dwl-user/config.h`:
 
 | Keybind | Action | Evidence (`builds/dwl-user/config.h`) |
 |---|---|---|
-| `Super+Shift+J` / `Super+Shift+K` | `movestack` down / up stack | `config.h:176-177` |
-| `Super+u` | bottomstack layout (`TTT`/bstack) | `config.h:199` (`setlayout &layouts[3]`) |
-| `Super+Shift+U` | bottomstack-horiz (`===`) | `config.h:200` (`setlayout &layouts[4]`) |
-| `Super+o` / `Super+Shift+O` | `setopacity` +0.1 / -0.1 | `config.h:191-192` |
-| `Super+b` | `spawnorfocus` waterfox | `config.h:164` → `browsercmd[]={"waterfox","Waterfox",NULL}` `config.h:128` |
+| `Super+Shift+J` / `Super+Shift+K` | `movestack` down / up stack | `config.h:318-319` |
+| `Super+u` | bottomstack layout (`TTT`/bstack) | `config.h:341` (`setlayout &layouts[3]`) |
+| `Super+Shift+U` | bottomstack-horiz (`===`) | `config.h:342` (`setlayout &layouts[4]`) |
+| `Super+o` / `Super+Shift+O` | `setopacity` +0.1 / -0.1 | `config.h:333-334` |
+| `Super+b` | `spawnorfocus` waterfox | `config.h:306` → `browsercmd[]={"waterfox","Waterfox",NULL}` `config.h:270` |
 | `Mod+a` | (freed — no binding) | swallow runs via `enableautoswallow=1` (`config.h:22`); toggle handlers + binds removed |
-| `Mod+Shift+G` | `togglegaps` | `config.h:209` |
-| `Super+0` | view all tags (`~0`) | `config.h:215` |
-| `Super+s` / `Super+Shift+S` | area / full screenshot | `config.h:254-255` |
-| `Super+Return` | `zoom` (promote to master) | `config.h:178` |
-| `Super+Tab` | view last tag | `config.h:195` |
-| `Ctrl+Alt+Backspace` | quit dwl (`Terminate_Server`) | `config.h:275` |
+| `Mod+Shift+G` | `togglegaps` | `config.h:349` |
+| `Super+0` | view all tags (`~0`) | `config.h:355` |
+| `Super+s` / `Super+Shift+S` | area / full screenshot | `config.h:397-398` |
+| `Super+Return` | `zoom` (promote to master) | `config.h:320` |
+| `Super+Tab` | view last tag | `config.h:337` |
+| `Ctrl+Alt+Backspace` | quit dwl (`Terminate_Server`) | `config.h:417-420` |
 
-Window rules (grepped from `config.h:46-53`):
+Window rules (grepped from `config.h:46-195`):
 
 | App | Rule | Evidence |
 |---|---|---|
-| `wmenu-center` | floating, opacity `0.85f` | `config.h:48` |
-| `waterfox` | tag `1 << 8` = **tag 9**, opacity 1.0 | `config.h:49` |
+| `wmenu-center` | floating, opacity `0.85f` | `config.h:49` |
+| `waterfox` | no tag (`tags = 0`), opacity 1.0 | `config.h:192` |
 
 NOTE: bstack (`Super+u/U`), swallow (now unbound — autoswallow only), and gaps (`Mod+Shift+G`)
 exist ONLY in `builds/dwl-user/config.h`. They are ABSENT from the `config.h`
