@@ -1142,6 +1142,12 @@ commitlayersurfacenotify(struct wl_listener *listener, void *data)
 		l->layer_surface->current = l->layer_surface->pending;
 		arrangelayers(l->mon);
 		l->layer_surface->current = old_state;
+		/* Push bar_geometry now so overlay clients (e.g. wmenu) can
+		 * position themselves before their first frame. bar_geometry is
+		 * push-only and otherwise arrives only after the surface is
+		 * mapped (keyboard grab -> focusclient -> drawbars), which is
+		 * one frame too late. */
+		drawbars();
 		return;
 	}
 
@@ -4105,6 +4111,10 @@ virtualkeyboard(struct wl_listener *listener, void *data)
 
 	/* Add the new keyboard to the group */
 	wlr_keyboard_group_add_keyboard(group->wlr_group, &kb->keyboard);
+	/* wlr_seat_set_keyboard does not update capabilities; without this
+	 * clients never see the virtual keyboard (caps stay 0x0). OR in the
+	 * keyboard bit so existing caps (pointer, touch) are preserved. */
+	wlr_seat_set_capabilities(seat, seat->capabilities | WL_SEAT_CAPABILITY_KEYBOARD);
 }
 
 void

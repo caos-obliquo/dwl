@@ -23,6 +23,8 @@
 ### Fixed
 
 * Crash when a client is created while all outputs are disabled.
+* First frame of overlay clients (e.g. wmenu) now positions correctly: bar_geometry is pushed on the initial layer-surface commit instead of only after the surface is mapped (keyboard grab -> focusclient -> drawbars), which was one frame too late.
+* Virtual keyboards now update seat capabilities, so clients see them (previously caps stayed 0x0).
 
 ### Security
 ### Contributors
